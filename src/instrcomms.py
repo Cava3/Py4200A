@@ -8,14 +8,12 @@ import pyvisa as visa
 
 class Communications:
     """
-    This class offers the consumer a collection of wrapper menthods that
-    leverage PyVisa calls and attempts to condense collections of methods
-    therein while also adding in a means for echoing command calls to the
-    terminal if the appropriate internal attribute is set to True.
+    This class offers the consumer a collection of wrapper menthods that leverage PyVisa calls and attempts
+    to condense collections of methods therein while also adding in a means for echoing command calls
+    to the terminal if the appropriate internal attribute is set to True.
 
-    Note that this is a work in progress and by no means a work of
-    perfection. Please feel free to copy, reuse, or enhance to your own
-    liking and feel free to leave suggestions for improvement. Thanks!
+    Note that this is a work in progress and by no means a work of perfection. Please feel free to copy,
+    reuse, or enhance to your own liking and feel free to leave suggestions for improvement. Thanks!
     """
 
     def __init__(self, instrument_resource_string: str):
@@ -39,12 +37,8 @@ class Communications:
         Open an instance of an instrument object for remote communication.
 
         Args:
-            timeout (int): Time in milliseconds to wait before the \
-                communication transaction with the target instrument\
-                    is considered failed (timed out).
-
-        Returns:
-            None
+            timeout (int): Time in milliseconds to wait before the communication transaction with the\
+                target instrument is considered failed (timed out).
         """
         try:
             if self._resource_manager is None:
@@ -96,12 +90,6 @@ class Communications:
     def disconnect(self):
         """
         Close an instance of an instrument object.
-
-        Args:
-            None
-
-        Returns:
-            None
         """
         try:
             self._instrument_object.close()
@@ -115,11 +103,7 @@ class Communications:
         Issue controlling commands to the target instrument.
 
         Args:
-            command (str): The command issued to the instrument to make it\
-                perform some action or service.
-
-        Returns:
-            None
+            command (str): The command issued to the instrument to make it perform some action or service.
         """
         try:
             if self._echo_cmds is True:
@@ -131,30 +115,23 @@ class Communications:
 
     def read(self) -> str:
         """
-        Used to read commands from the instrument.
-
-        Args:
-            None
+        Used to read results from the instrument.
 
         Returns:
-            (str): The requested information returned from the target
-            instrument.
+            (str): The requested information returned from the target instrument.
         """
         return self._instrument_object.read()
 
     def query(self, command: str) -> str:
         """
-        Used to send commands to the instrument  and obtain an information
-        string from the instrument. Note that the information received will
-        depend on the command sent and will be in string format.
+        Used to send commands to the instrument  and obtain an information string from the instrument.
+        Note that the information received will depend on the command sent and will be in string format.
 
         Args:
-            command (str): The command issued to the instrument to make it
-            perform some action or service.
+            command (str): The command issued to the instrument to make itvperform some action or service.
 
         Returns:
-            (str): The requested information returned from the target
-            instrument.
+            (str): The requested information returned from the target instrument.
         """
         response = ""
         try:
