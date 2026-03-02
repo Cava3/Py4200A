@@ -17,8 +17,9 @@ class Board:
     Attributes:
         alias (str): user-defined alias name
         board_type (BoardType): The type of board, detected from it's name
-        name (str): The name of the board (e.g., "SMU1", "PMU2").
-        status (str): Current status of the board (e.g., "Idle", "Measuring", "Error").
+        name (str): The name of the board (e.g., "SMU1", "PMU2")
+        status (str): Current status of the board (e.g., "Idle", "Measuring", "Error")
+        slot (int): The slot number where the SMU is installed in the instrument
     """
 
     def __init__(self, name: str) -> None:
@@ -32,7 +33,7 @@ class Board:
         self._name: str = name
         self._alias: str = name
         self.board_type: BoardType = BoardType.NONE
-
+        self._slot = 0
         self.status = Status.CONFIGURING
         self.detect_type()
         self.status = Status.READY
@@ -75,3 +76,11 @@ class Board:
     @name.setter
     def name(self, value: str):
         raise Exception("Name is read-only and cannot be changed after initialization.")
+
+    @property
+    def slot(self) -> int:
+        return self._slot
+
+    @slot.setter
+    def slot(self, value: int):
+        raise Exception("Slot is read-only and cannot be changed virtualy. Move the card physically.")
