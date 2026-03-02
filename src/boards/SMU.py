@@ -36,7 +36,7 @@ class SMU(Board):
     # === Factory ===
 
     @classmethod
-    def of(cls, board: Board) -> "SMU":
+    def of(cls, board: Board, hp: bool = False) -> "SMU":
         """
         Create an SMU instance from a generic Board instance.
 
@@ -46,7 +46,7 @@ class SMU(Board):
         Returns:
             SMU: An instance of the SMU class.
         """
-        smu = SMU(board.name)
+        smu = SMU(board.name, hp = hp)
         smu.status = board.status
         return smu
 
