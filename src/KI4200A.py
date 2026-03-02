@@ -94,8 +94,19 @@ class KI4200A:
         Reset the instrument to its default state.
         """
         self.write("BC") # Clear buffer
+        self.write(":ERROR:LAST:CLEAR") # Clear last error
         self.write("*RST") # Reset instruments
         self.status = Status.READY
+
+    def getError(self) -> str:
+        """
+        Query the instrument for any error messages and return the response.
+
+        Returns:
+            str: The error message from the instrument, or "No error" if there are no errors.
+        """
+        error = self.query(":ERROR:LAST:GET")
+        return error
 
     def write(self, command: str) -> None:
         """
@@ -129,7 +140,7 @@ class KI4200A:
         self.status = Status.DISCONNECTED
 
 
-    # Private
+    # === Private ===
 
     def _type_board(self, b: Board) -> Board :
         """
