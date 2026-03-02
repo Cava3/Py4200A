@@ -9,7 +9,8 @@ and provides user with high-level OOP to interact with the instrument in a more 
 
 from .instrcomms import Communications
 from .boards.Board import Board
-from .consts import Status
+from .boards import *
+from .consts import Status, BoardType
 
 class KI4200A:
     """
@@ -36,7 +37,7 @@ class KI4200A:
         # Attributes declaration
         #Public
         self.id: dict[str, str]
-        self.status: Status      # KI4200A's current task or state
+        self.status: Status             # KI4200A's current task or state
         self.l_equipment: list[Board]   # List of board objects equipped in the instrument
         
         #Private
@@ -91,7 +92,7 @@ class KI4200A:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
         l_boards: list[Board] = [Board(name=board_name) for board_name in self._l_equipped]
-        self.l_equipment = [board for board in l_boards] #TODO: Convert to SMU instance
+        self.l_equipment = [self._type_board(board) for board in l_boards] #TODO: Convert to SMU instance
 
 
     def reset(self) -> None:
@@ -133,6 +134,27 @@ class KI4200A:
         self._comms.disconnect()
         self.status = Status.DISCONNECTED
 
+
+    # Private
+
+    def _type_board(self, b: Board) -> Board :
+        """
+        A function to auto-type a board. Called upon board detection
+
+        Args:
+            b (Board): the Board to be converted
+        
+        Returns:
+            Board: A board converted (if possible) to corresponding subclass
+        """
+
+        if b.board_type == BoardType.SMU :
+            return SMU.of(b, hp="HP" in b.name.upper())
+        elif b.board_type == BoardType.CVU :
+            return CVU.of(b)
+
+
+        return b
 
     def __del__(self) -> None:
         """
