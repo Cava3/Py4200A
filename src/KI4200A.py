@@ -74,6 +74,7 @@ class KI4200A:
          - Identity of the instrument to populate the id attribute with Brand, Model, SN and SW version
          - Equipped modules and populate the l_equipment attribute with Board objects.
         """
+        # Get the IDN
         idn: list[str] = self.query("*IDN?").split(",")
         self.id["Brand"], self.id["Model"], self.id["Serial Number"], self.id["Software Version"] = idn[:4]
 
@@ -85,8 +86,9 @@ class KI4200A:
         if "PMU1RPM1-2" in self._l_equipped and "PMU1RPM1-1" not in self._l_equipped:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
+        # List and convert the boards
         l_boards: list[Board] = [Board(name=board_name) for board_name in self._l_equipped]
-        self.l_equipment = [self._type_board(board) for board in l_boards] #TODO: Convert to SMU instance
+        self.l_equipment = [self._type_board(board) for board in l_boards]
 
 
     def reset(self) -> None:
@@ -138,6 +140,11 @@ class KI4200A:
         """
         self._comms.disconnect()
         self.status = Status.DISCONNECTED
+
+    def reconnect(self) -> None:
+        """
+        Reconnects to the instrument when disconnected.
+        """
 
 
     # === Private ===
