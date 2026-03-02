@@ -73,12 +73,6 @@ class KI4200A:
         Scan the instrument for :
          - Identity of the instrument to populate the id attribute with Brand, Model, SN and SW version
          - Equipped modules and populate the l_equipment attribute with Board objects.
-
-        Args:
-            None
-
-        Returns:
-            None
         """
         idn: list[str] = self.query("*IDN?").split(",")
         self.id["Brand"], self.id["Model"], self.id["Serial Number"], self.id["Software Version"] = idn[:4]

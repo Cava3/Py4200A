@@ -98,6 +98,9 @@ This list is non-exhaustive and lacks the different board types.
 - [ ] Step source
 - [ ] Multimeter
 
+**CVU**
+- [ ] Not sure yet
+
 **Utils**
 - [ ] Export results
 - [ ] Save and load configs
@@ -122,7 +125,7 @@ This list is non-exhaustive and lacks the different board types.
 
 ## Contribute
 If you are not a developer, or do not wish to publish code, feel free to open an issue. I will review and get to work on it as soon as possible. Please understand that it may take some time though, as I am currently the only maintainer and have other things to do in life.  
-Feel free to open pull request. I will review each one, and test it, make sure it is memory safe, properly documented, properly commented, and really brings something to the table.  
+Feel free to open pull request. I will review each one, and test it, make sure it is memory safe, properly documented, properly commented, and really brings something to the table. Check existing file for documentation example.  
 Garbage AI-generated spaghetti code (also know as "*vibe coding*") will be rejected. I have nothing against good and proper usage of AI tools though. Simply keep your code relevant and readable.
 
 ## See also
