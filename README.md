@@ -129,7 +129,7 @@ and get to work on it as soon as possible. Please understand that it may take so
 am currently the only maintainer and have other things to do in life.  
 Feel free to open pull request. I will review each one, and test it, make sure it is memory safe, properly
 documented, properly commented, and really brings something to the table. Check existing file for documentation
-example.  
+example. Typing and using PyLint in "strict" mode will also be required  
 Garbage AI-generated spaghetti code (also know as "*vibe coding*") will be rejected. I have nothing against
 good and proper usage of AI tools though. Simply keep your code relevant and readable.
 
