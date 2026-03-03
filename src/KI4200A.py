@@ -24,7 +24,7 @@ class KI4200A:
         write_termination (str): The termination character(s) used when writing commands to the instrument.
     """
 
-    def __init__(self, instrument_resource_string: str, ) -> None:
+    def __init__(self, instrument_resource_string: str) -> None:
         """
         Initialize a KI4200A instance and establish communication with the instrument.
         The initialization process includes setting up communication parameters, scanning for equipped\
@@ -48,6 +48,7 @@ class KI4200A:
         # Initialization process
         self.status = Status.INITIALIZING
         self._comms = Communications(instrument_resource_string)
+        self._instrument_resource_string = instrument_resource_string
 
         self.status = Status.CONNECTING
         self._comms.connect()
@@ -145,6 +146,7 @@ class KI4200A:
         """
         Reconnects to the instrument when disconnected.
         """
+        self.__init__(self._instrument_resource_string)
 
 
     # === Private ===
