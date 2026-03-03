@@ -88,7 +88,7 @@ class KI4200A:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
         # List and convert the boards
-        l_boards: list[Board] = [Board(name=board_name) for board_name in self._l_equipped]
+        l_boards: list[Board] = [Board(name=board_name, comm=self._comms) for board_name in self._l_equipped]
         self.l_equipment = [self._type_board(board) for board in l_boards]
 
 
