@@ -55,6 +55,20 @@ class SMU(Board):
         self._write("DE")
         self._write("CH"+str(self.slot))
 
+    def setAsVoltmeter(self, voltageMeasureName: str = "") -> None:
+        """
+        Sets the current SMU to voltmeter only (no source, no ground)
+        """
+        # Store the measurement name
+        if voltageMeasureName != "":
+            self.voltageMeasureName = voltageMeasureName
+
+        self._write("VM"+str(self.slot)+" "+self.voltageMeasureName)
+        return
+    
+    def setAsSource(self):
+        self._setDefinition()
+
     # === Factory ===
 
     @classmethod
