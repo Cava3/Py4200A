@@ -96,7 +96,7 @@ This list is non-exhaustive and lacks the different board types.
 - [ ] Constant source
 - [ ] Sweep source
 - [ ] Step source
-- [ ] Multimeter
+- [ ] Voltmeter
 
 **CVU**
 - [ ] WIP

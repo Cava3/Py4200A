@@ -19,6 +19,7 @@ class SourceFunction(Enum):
     SWEEP = 1
     STEP = 2
     CONSTANT = 3
+    # SWEEP2 = 4
 
 class BoardType(Enum):
     """Enum of possible board types that can be equipped in the KI4200A."""

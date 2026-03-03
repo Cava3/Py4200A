@@ -1,0 +1,48 @@
+- [x] Generic request
+- [x] `*IDN?` - Get identifying data from the Keithley
+- [x] `*OPT?` - Get list of equipped cards' names
+- [x] `*RST` - Set instruments to default
+- [x] `SP` - IDK but allows to check for data ready ? Probably ?
+- [x] `DE` - # Select page "Channel Definition"
+- [x] `CH` - Full SMU definition
+- [ ] `VM` - Define as voltmeter only
+- [ ] `VS` - Define as volt source
+- [ ] `DT` - Delay measurement during sweep (to counter the capacitive effect)
+- [ ] `FS` and `RT` - Alternative sweep settings
+- [ ] `HT` - Delay between steps before starting the sweep
+- [ ] `SC` - Constant voltage value (VS only)
+- [ ] `ST` - Cut or keep power after test
+- [ ] `VC` and `IC` - Constant voltage/intensity value
+- [ ] `VL` and `IL` - Sweep list values
+- [ ] `VP` and `IP` - Step settings
+- [ ] `VR` and `IR` - Sweep function
+- [ ] `SM` - # Select page "Measurement setup"
+- [ ] `DM` - Select between table and graph display mode
+- [ ] `IN` - Set time between measurements for time-based measurements
+- [ ] `LI` - Select measurements to be shown in table display mode
+- [ ] `NR` - Amount of measurements for time-based measurements
+- [ ] `WT` - Wait time, unsure of true function
+- [ ] `XN` - Set X axis measurements to display
+- [ ] `XT` - Set X axis to display time
+- [ ] `YA` and `YB` - Set Y1 and Y2 measurements to display
+- [ ] `MD` - # Select page "Measurement control"
+- [ ] `ME` - Run test
+- [ ] No page required
+- [ ] `GT` - Loads data or program
+- [ ] `SV` - Save data or program
+- [ ] `MP` - Map a channel to a SMU, VS or VM
+- [ ] `SR` - Set source range
+- [ ] `US` - # Select page "User Mode" (real time ?)
+- [ ] `DI` and `DV` - Define as current/voltage source
+- [ ] `DS` - Set output value for voltage source
+- [ ] `TI` and `TV` - Trigger a measurement of wanted value
+- [ ] `AC` - Calibrate a channel
+- [x] `BC` - Clear buffer
+- [ ] `DO` - Get readings for a measurement
+- [ ] `EC` - Exit if compliance reached (saturation)
+- [ ] `EM` - Switch to 4145 emulation mode
+- [ ] `IT` - SMU integration time (noisy, medium, quiet)
+- [ ] `RD` - Get real time readings
+- [ ] `RG` - Set current rangewhen measuring
+- [ ] `RI` and `RV` - Set real-time intensity/voltage output
+- [ ] `RS` - Float precision (0-7)
