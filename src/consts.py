@@ -6,7 +6,7 @@ Authors: Lucas LE DUDAL
 
 from enum import Enum
 
-class ElectricalUnit(Enum):
+class SourceType(Enum):
     """Enum of possible electrical units for measurements, sources, and limits."""
     NONE = 0 # OFF
     VOLT = 1
