@@ -11,6 +11,7 @@ from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
 from .consts import Status, BoardType
+from pyvisa.resources.gpib import GPIBInstrument
 
 class KI4200A:
     """
@@ -148,6 +149,19 @@ class KI4200A:
         """
         self.__init__(self._instrument_resource_string)
 
+    def waitForDataReady(self, timout: int = 25_000) -> None:
+        """
+        Wait until the instrument has completed its current operation and is ready for the next command.
+        This can be used after issuing a command that takes time to execute, to ensure that the instrument is\
+        ready before sending the next command.
+        """
+        if isinstance(self._comms.instrument_object, GPIBInstrument):
+            # For GPIB, use the event manager
+            self._comms.instrument_object.wait_for_srq(timeout=timout)
+        else:
+            # For TCPIP, repeated requests until
+            while int(self.query("SP")) not in [0, 1]:
+                pass
 
     # === Private ===
 
