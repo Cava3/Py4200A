@@ -1,5 +1,8 @@
 # Py4200A
 
+> [!CAUTION]
+> ***This project is under development. It is nowhere near being functionnal yet. You can check branches to see where the development is going.***
+
 py4200A is a python library that provides support for controlling the Keithley Instrument 4200A SCS.  
 The library is object oriented, to make it easy to use. It translates settings to instructions for KXCI.  
 

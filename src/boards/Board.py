@@ -16,7 +16,6 @@ class Board:
     This class represents a generic board or module equipped in the Keithley 4200A.
 
     Attributes:
-        alias (str): user-defined alias name
         board_type (BoardType): The type of board, detected from it's name
         name (str): The name of the board (e.g., "SMU1", "PMU2")
         status (str): Current status of the board (e.g., "Idle", "Measuring", "Error")
@@ -32,7 +31,6 @@ class Board:
         """
         self.status: Status = Status.INITIALIZING
         self._name: str = name
-        self._alias: str = name
         self.board_type: BoardType = BoardType.NONE
         self._slot = 0
         self._comm = comm
@@ -48,12 +46,10 @@ class Board:
         """ # TODO: PMU1RPM1-2
         if "SMU" in self.name.upper():
             self.board_type = BoardType.SMU
-        elif "RPM" in self.name.upper():
-            self.board_type = BoardType.RPM
-        elif "PMU" in self.name.upper():
-            self.board_type = BoardType.PMU
         elif "CVU" in self.name.upper():
             self.board_type = BoardType.CVU
+        elif "PMU" in self.name.upper() and "RPM" in self.name.upper():
+            self.board_type = BoardType.PMU_RPM
         else:
             self.board_type = BoardType.NONE
 
@@ -93,15 +89,6 @@ class Board:
         return isinstance(other, Board) and self.name == other.name
     
     # === Getters and setters ===
-
-    @property
-    def alias(self) -> str:
-        return self._alias
-    
-    @alias.setter
-    def alias(self, value: str) -> None:
-        # TODO: SEND "DE" COMMAND
-        self._alias = value
 
     @property
     def name(self) -> str:

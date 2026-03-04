@@ -25,9 +25,8 @@ class BoardType(Enum):
     """Enum of possible board types that can be equipped in the KI4200A."""
     NONE = 0 # OFF
     SMU = 1
-    PMU = 2
-    CVU = 3
-    RPM = 4
+    CVU = 2
+    PMU_RPM = 3
 
 class Status(Enum):
     """Enum of all possible tasks and states an equipment can have"""
