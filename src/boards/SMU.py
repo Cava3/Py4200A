@@ -76,6 +76,7 @@ class SMU(Board):
 
         # Generate and send the commands
         self.smuType = SMUMode.VM
+        self._write("DE")
         self._write("VM" + str(self.slot) + " '" + self.voltageMeasureName + "'")
         return
     
@@ -101,6 +102,7 @@ class SMU(Board):
 
         # Generate and send the commands
         self.smuType = SMUMode.VS
+        self._write("DE")
         self._write("VS" + str(self.slot) + " '" + self.voltageMeasureName + "' " + str(self.sourceFunction.value))
     
     def setupSMU(self, voltageMeasureName: str = "", currentMeasureName: str = "", sourceType: SourceType = SourceType.NONE, sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
@@ -136,6 +138,7 @@ class SMU(Board):
         self.smuType = SMUMode.SMU
         command: str = "CH" + str(self.slot) + " '" + self.voltageMeasureName + "' '" + self.currentMeasureName +\
                        "' " + str(self.sourceType.value) + " " + str(self.sourceFunction.value)
+        self._write("DE")
         self._write(command)
         return
 
