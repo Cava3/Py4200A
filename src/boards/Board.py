@@ -9,6 +9,7 @@ that can be inherited and extended by specific board classes, allowing for a str
 approach to representing the various components of the instrument.
 """
 from ..consts import Status, BoardType
+from ..instrcomms import Communications
 
 class Board:
     """
@@ -16,11 +17,12 @@ class Board:
 
     Attributes:
         board_type (BoardType): The type of board, detected from it's name
-        name (str): The name of the board (e.g., "SMU1", "PMU2").
-        status (str): Current status of the board (e.g., "Idle", "Measuring", "Error").
+        name (str): The name of the board (e.g., "SMU1", "PMU2")
+        status (str): Current status of the board (e.g., "Idle", "Measuring", "Error")
+        slot (int): The slot number where the SMU is installed in the instrument
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, comm: Communications) -> None:
         """
         Initialize a Board instance with the given name and slot number.
         Args:
@@ -30,7 +32,8 @@ class Board:
         self.status: Status = Status.INITIALIZING
         self._name: str = name
         self.board_type: BoardType = BoardType.NONE
-
+        self._slot = 0
+        self._comm = comm
         self.status = Status.CONFIGURING
         self.detect_type()
         self.status = Status.READY
@@ -40,8 +43,8 @@ class Board:
         Detect the type of the board based on its name and set the type attribute accordingly.
         This method can be extended to include more specific detection logic based on the instrument's \
         response or configuration.
-        """ # TODO: PMU1RPM1-2
-        if "SMU" in self.name.upper():
+        """
+        if "SMU" in self.name.upper() or "VS" in self.name.upper() or "VM" in self.name.upper():
             self.board_type = BoardType.SMU
         elif "CVU" in self.name.upper():
             self.board_type = BoardType.CVU
@@ -50,8 +53,40 @@ class Board:
         else:
             self.board_type = BoardType.NONE
 
+    # === Private / Utils ===
+
+    def _write(self, command: str) -> None:
+        """
+        AS A USER, PREFER USING THE FUNCTION FROM THE KI4200 CLASS
+
+        Send a command to the instrument but doesn't read an answer.  
+        Only for GPIB, as TCPIP always return a value, or "ACK".  
+        For TCPIP, redirects to `query`
+        """
+        if self._comm.con_type == 1:
+            self._comm.write(command)
+        else :
+            self._query(command)
+
+
+    def _query(self, command: str) -> str:
+        """
+        AS A USER, PREFER USING THE FUNCTION FROM THE KI4200 CLASS
+
+        Send a command to the instrument and return the response.
+
+        Args:
+            command (str): The command to send to the instrument.
+        Returns:
+            str: The response from the instrument.
+        """
+        return self._comm.query(command)
+
     def __str__(self) -> str:
         return self.name
+    
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Board) and self.name == other.name
     
     # === Getters and setters ===
 
@@ -62,3 +97,11 @@ class Board:
     @name.setter
     def name(self, value: str):
         raise Exception("Name is read-only and cannot be changed after initialization.")
+
+    @property
+    def slot(self) -> int:
+        return self._slot
+
+    @slot.setter
+    def slot(self, value: int):
+        raise Exception("Slot is read-only and cannot be changed virtualy. Move the card physically.")

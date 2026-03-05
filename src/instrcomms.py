@@ -19,7 +19,7 @@ class Communications:
     def __init__(self, instrument_resource_string: str):
         self._instrument_resource_string: str = instrument_resource_string
         self._resource_manager: visa.ResourceManager | None = None
-        self._instrument_object: visa.resources.MessageBasedResource
+        self.instrument_object: visa.resources.MessageBasedResource
         self._timeout: int = 5_000
         self._echo_cmds: bool = False
         self._version: float = 1.1
@@ -55,23 +55,23 @@ class Communications:
             )
 
             if issubclass(type(t_resource), visa.resources.MessageBasedResource):
-                self._instrument_object = t_resource # type: ignore
+                self.instrument_object = t_resource # type: ignore
                 self.con_type = int(issubclass(type(t_resource), visa.resources.GPIBInstrument))
             else :
                 raise Exception("Resource is not message-based")
 
             if timeout is None:
-                self._instrument_object.timeout = self._timeout
+                self.instrument_object.timeout = self._timeout
             else:
-                self._instrument_object.timeout = timeout
+                self.instrument_object.timeout = timeout
                 self._timeout = timeout
 
             # Check for the SOCKET as part of the instrument ID string and set
             # the following accordingly...
             if "SOCKET" in self._instrument_resource_string:
-                self._instrument_object.write_termination = "\n"
-                self._instrument_object.read_termination = "\n"
-                self._instrument_object.send_end = True
+                self.instrument_object.write_termination = "\n"
+                self.instrument_object.read_termination = "\n"
+                self.instrument_object.send_end = True
 
         except visa.VisaIOError as visaerr:
             # Provide an actionable error with environment details
@@ -92,7 +92,7 @@ class Communications:
         Close an instance of an instrument object.
         """
         try:
-            self._instrument_object.close()
+            self.instrument_object.close()
             self.con_type = -1
         except visa.VisaIOError as visaerr:
             print(f"{visaerr}")
@@ -108,7 +108,7 @@ class Communications:
         try:
             if self._echo_cmds is True:
                 print(command)
-            self._instrument_object.write(command)
+            self.instrument_object.write(command)
         except visa.VisaIOError as visaerr:
             print(f"{visaerr}")
         return
@@ -120,7 +120,7 @@ class Communications:
         Returns:
             (str): The requested information returned from the target instrument.
         """
-        return self._instrument_object.read()
+        return self.instrument_object.read()
 
     def query(self, command: str) -> str:
         """
@@ -137,7 +137,7 @@ class Communications:
         try:
             if self._echo_cmds is True:
                 print(command)
-            response = self._instrument_object.query(command).rstrip()
+            response = self.instrument_object.query(command).rstrip()
         except visa.VisaIOError as visaerr:
             print(visaerr)
 
@@ -147,16 +147,16 @@ class Communications:
 
     @property
     def write_termination(self) -> str:
-        return self._instrument_object.write_termination
+        return self.instrument_object.write_termination
     
     @write_termination.setter
     def write_termination(self, value: str) -> None:
-        self._instrument_object.write_termination = value
+        self.instrument_object.write_termination = value
 
     @property
     def read_termination(self) -> str:
-        return str(self._instrument_object.read_termination)
+        return str(self.instrument_object.read_termination)
     
     @read_termination.setter
     def read_termination(self, value: str) -> None:
-        self._instrument_object.read_termination = value
+        self.instrument_object.read_termination = value

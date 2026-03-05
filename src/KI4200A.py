@@ -11,6 +11,7 @@ from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
 from .consts import Status, BoardType
+from pyvisa.resources.gpib import GPIBInstrument
 
 class KI4200A:
     """
@@ -24,7 +25,7 @@ class KI4200A:
         write_termination (str): The termination character(s) used when writing commands to the instrument.
     """
 
-    def __init__(self, instrument_resource_string: str, ) -> None:
+    def __init__(self, instrument_resource_string: str) -> None:
         """
         Initialize a KI4200A instance and establish communication with the instrument.
         The initialization process includes setting up communication parameters, scanning for equipped\
@@ -48,6 +49,7 @@ class KI4200A:
         # Initialization process
         self.status = Status.INITIALIZING
         self._comms = Communications(instrument_resource_string)
+        self._instrument_resource_string = instrument_resource_string
 
         self.status = Status.CONNECTING
         self._comms.connect()
@@ -74,6 +76,7 @@ class KI4200A:
          - Identity of the instrument to populate the id attribute with Brand, Model, SN and SW version
          - Equipped modules and populate the l_equipment attribute with Board objects.
         """
+        # Get the IDN
         idn: list[str] = self.query("*IDN?").split(",")
         self.id["Brand"], self.id["Model"], self.id["Serial Number"], self.id["Software Version"] = idn[:4]
 
@@ -85,8 +88,9 @@ class KI4200A:
         if "PMU1RPM1-2" in self._l_equipped and "PMU1RPM1-1" not in self._l_equipped:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
-        l_boards: list[Board] = [Board(name=board_name) for board_name in self._l_equipped]
-        self.l_equipment = [self._type_board(board) for board in l_boards] #TODO: Convert to SMU instance
+        # List and convert the boards
+        l_boards: list[Board] = [Board(name=board_name, comm=self._comms) for board_name in self._l_equipped]
+        self.l_equipment = [self._type_board(board) for board in l_boards]
 
 
     def reset(self) -> None:
@@ -94,8 +98,19 @@ class KI4200A:
         Reset the instrument to its default state.
         """
         self.write("BC") # Clear buffer
+        self.write(":ERROR:LAST:CLEAR") # Clear last error
         self.write("*RST") # Reset instruments
         self.status = Status.READY
+
+    def getError(self) -> str:
+        """
+        Query the instrument for any error messages and return the response.
+
+        Returns:
+            str: The error message from the instrument, or "No error" if there are no errors.
+        """
+        error = self.query(":ERROR:LAST:GET")
+        return error
 
     def write(self, command: str) -> None:
         """
@@ -128,8 +143,27 @@ class KI4200A:
         self._comms.disconnect()
         self.status = Status.DISCONNECTED
 
+    def reconnect(self) -> None:
+        """
+        Reconnects to the instrument when disconnected.
+        """
+        self.__init__(self._instrument_resource_string)
 
-    # Private
+    def waitForDataReady(self, timout: int = 25_000) -> None:
+        """
+        Wait until the instrument has completed its current operation and is ready for the next command.
+        This can be used after issuing a command that takes time to execute, to ensure that the instrument is\
+        ready before sending the next command.
+        """
+        if isinstance(self._comms.instrument_object, GPIBInstrument):
+            # For GPIB, use the event manager
+            self._comms.instrument_object.wait_for_srq(timeout=timout)
+        else:
+            # For TCPIP, repeated requests until
+            while int(self.query("SP")) not in [0, 1]:
+                pass
+
+    # === Private ===
 
     def _type_board(self, b: Board) -> Board :
         """
@@ -143,7 +177,7 @@ class KI4200A:
         """
 
         if b.board_type == BoardType.SMU :
-            return SMU.of(b, hp="HP" in b.name.upper())
+            return SMU.of(b)
         elif b.board_type == BoardType.CVU :
             return CVU.of(b)
 
