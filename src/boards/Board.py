@@ -43,8 +43,8 @@ class Board:
         Detect the type of the board based on its name and set the type attribute accordingly.
         This method can be extended to include more specific detection logic based on the instrument's \
         response or configuration.
-        """ # TODO: PMU1RPM1-2
-        if "SMU" in self.name.upper():
+        """
+        if "SMU" in self.name.upper() or "VS" in self.name.upper() or "VM" in self.name.upper():
             self.board_type = BoardType.SMU
         elif "CVU" in self.name.upper():
             self.board_type = BoardType.CVU

@@ -6,6 +6,12 @@ Authors: Lucas LE DUDAL
 
 from enum import Enum
 
+class SMUMode(Enum):
+    """Enum of SMU types"""
+    SMU = 0 # Full def
+    VS = 1  # Voltage source only
+    VM = 2  # Voltage meter only
+
 class SourceType(Enum):
     """Enum of possible electrical units for measurements, sources, and limits."""
     NONE = 0 # OFF

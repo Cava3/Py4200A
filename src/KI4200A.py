@@ -177,7 +177,7 @@ class KI4200A:
         """
 
         if b.board_type == BoardType.SMU :
-            return SMU.of(b, hp="HP" in b.name.upper())
+            return SMU.of(b)
         elif b.board_type == BoardType.CVU :
             return CVU.of(b)
 

@@ -7,7 +7,7 @@ type of board (an SMU) equipped in the KI4200A. The SMU class provides methods a
 to SMUs, such as voltage and current measurement capabilities.
 """
 from .Board import Board
-from ..consts import Status, BoardType, SourceType, SourceFunction
+from ..consts import Status, BoardType, SourceType, SourceFunction, SMUMode
 from ..instrcomms import Communications
 
 class SMU(Board):
@@ -27,7 +27,7 @@ class SMU(Board):
         sourceFunction (consts.SourceFunction): The function to apply to the source (SWEEP, STEP, CONSTANT)
     """
 
-    def __init__(self, name: str, comm: Communications, hp: bool = False) -> None:
+    def __init__(self, name: str, comm: Communications) -> None:
         """
         Initialize an SMU instance with the given name and set its type to BoardType.SMU.
 
@@ -36,16 +36,17 @@ class SMU(Board):
         """
         self.status = Status.INITIALIZING
         self._name: str = name
-        self.hp: bool = hp
+        self.hp: bool = "HP" in name.upper()
         slot_str: str = name[-1]
         self._comm = comm
         self._slot: int = int(slot_str) if slot_str.isdigit() else -1
         self.board_type: BoardType = BoardType.SMU
 
-        self._voltageMeasureName: str = self.name+"V"
-        self._currentMeasureName: str = self.name+"I"
-        self._sourceType: SourceType = SourceType.NONE
-        self._sourceFunction: SourceFunction = SourceFunction.NONE
+        self._smuType: SMUMode = SMUMode.VM if "SMU" in name.upper() else SMUMode.VS if "VS" in name.upper() else SMUMode.SMU
+        self.voltageMeasureName: str = self.name+"V"
+        self.currentMeasureName: str = self.name+"I"
+        self.sourceType: SourceType = SourceType.NONE
+        self.sourceFunction: SourceFunction = SourceFunction.NONE
         self.status= Status.READY
 
     def deactivate(self):
@@ -55,24 +56,93 @@ class SMU(Board):
         self._write("DE")
         self._write("CH"+str(self.slot))
 
-    def setAsVoltmeter(self, voltageMeasureName: str = "") -> None:
+    def setupVoltmeter(self, voltageMeasureName: str = "") -> None:
         """
         Sets the current SMU to voltmeter only (no source, no ground)
+
+        Args:
+            voltageMeasureName (str): Name of the voltage measurement for later access. Defaults to self.voltageMeasureName
+
+        Raises:
+            AttributeError: If the SMU settings are not properly defined. currentMeasureName cannot be empty.
         """
         # Store the measurement name
-        if voltageMeasureName != "":
-            self.voltageMeasureName = voltageMeasureName
+        self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
 
-        self._write("VM"+str(self.slot)+" "+self.voltageMeasureName)
+        # Attribute checking
+        if not self._isDefinitionOk(SMUMode.SMU):
+            raise AttributeError("VM definition is incomplete. Please set all required attributes :\
+                                  voltageMeasureName")
+
+        # Generate and send the commands
+        self.smuType = SMUMode.VM
+        self._write("VM" + str(self.slot) + " '" + self.voltageMeasureName + "'")
         return
     
-    def setAsSource(self):
-        self._setDefinition()
+    def setupVoltageSource(self, voltageMeasureName: str = "", sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
+        """
+        Sets the current SMU to voltage source (no current source or measurement)
+
+        Args:
+            voltageMeasureName (str): Name of the voltage measurement for later access. Defaults to self.voltageMeasureName
+            sourceFunction (SourceFunction): The source functions to use (sweep, step, constant). Defaults to self.sourceFunction
+        
+        Raises:
+            AttributeError: If the SMU settings are not properly defined. currentMeasureName and sourceFunction are required.
+        """
+        # Attribute saving
+        self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
+        self.sourceFunction = sourceFunction if sourceFunction != SourceFunction.NONE else self.sourceFunction
+
+        # Attribute checking
+        if not self._isDefinitionOk(SMUMode.SMU):
+            raise AttributeError("VS definition is incomplete. Please set all required attributes :\
+                                  voltageMeasureName, and sourceFunction.")
+
+        # Generate and send the commands
+        self.smuType = SMUMode.VS
+        self._write("VS" + str(self.slot) + " '" + self.voltageMeasureName + "' " + str(self.sourceFunction.value))
+    
+    def setupSMU(self, voltageMeasureName: str = "", currentMeasureName: str = "", sourceType: SourceType = SourceType.NONE, sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
+        """
+        Sends the DE command to define the SMU settings.
+
+        Args:
+            voltageMeasureName (str): Name of the voltage measurement for later access. Defaults to self.voltageMeasureName
+            currentMeasureName (str): Name of the current measurement for later access. Defaults to self.currentMeasureName
+            sourceType (SourceType): The type of source (current or voltage). Defaults to self.sourceType
+            sourceFunction (SourceFunction): The source functions to use (sweep, step, constant). Defaults to self.sourceFunction
+
+        Raises:
+            AttributeError: If the SMU settings are not properly defined. sourceType and sourceFunction\
+            have to be set, and currentMeasureName and voltageMeasureName cannot be empty.
+        """
+        # Attribute saving
+        self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
+        self.currentMeasureName = currentMeasureName if currentMeasureName != "" else self.currentMeasureName
+        self.sourceType = sourceType if sourceType != SourceType.NONE else self.sourceType
+        self.sourceFunction = sourceFunction if sourceFunction != SourceFunction.NONE else self.sourceFunction
+
+        # Attribute checking
+        if not self._isDefinitionOk(SMUMode.SMU):
+            raise AttributeError("SMU definition is incomplete. Please set all required attributes :\
+                                  voltageMeasureName, currentMeasureName, sourceType, and sourceFunction.")
+
+        # Source type "COMMON" doesn't support source functions
+        if self.sourceType == SourceType.COMMON:
+            self.sourceFunction = SourceFunction.CONSTANT
+
+        # Generate and send the commands
+        self.smuType = SMUMode.SMU
+        command: str = "CH" + str(self.slot) + " '" + self.voltageMeasureName + "' '" + self.currentMeasureName +\
+                       "' " + str(self.sourceType.value) + " " + str(self.sourceFunction.value)
+        self._write(command)
+        return
 
     # === Factory ===
 
     @classmethod
-    def of(cls, board: Board, hp: bool = False) -> "SMU":
+    def of(cls, board: Board) -> "SMU":
         """
         Create an SMU instance from a generic Board instance.
 
@@ -82,90 +152,44 @@ class SMU(Board):
         Returns:
             SMU: An instance of the SMU class.
         """
-        smu = SMU(board.name, comm=board._comm, hp = hp)
+        smu = SMU(board.name, comm=board._comm)
         smu.status = board.status
         return smu
 
     # === Private / Utils ===
 
-    def _isDefinitionOk(self) -> bool:
+    def _isDefinitionOk(self, type: SMUMode = SMUMode.SMU) -> bool:
         """
-        Allows to check if the SMU definition is ready and okay.
+        Allows to check if the attribute is okay for given SMU type.
 
         Returns:
             bool: True if data is complete, False if data is incomplete
         """
+        # voltageMeasureName is mandatory for all types
+        # sourceFunction is not mandatory for VM
+        # currentMeasureName is mandatory for SMU
+        # sourceType is mandatory for SMU
         return \
-            self.voltageMeasureName != ""\
-        and self.currentMeasureName != ""\
-        and self.sourceType != SourceType.NONE\
-        and (self.sourceFunction != SourceFunction.NONE or self.sourceType == SourceType.COMMON)
-        
-    def _setDefinition(self) -> None:
-        """
-        Sends the DE command to define the SMU settings.
-
-        Raises:
-            AttributeError: If the SMU settings are not properly defined. sourceType and sourceFunction\
-            have to be set, and currentMeasureName and voltageMeasureName cannot be empty.
-        """
-        if not self._isDefinitionOk():
-            raise AttributeError("SMU definition is incomplete. Please set all required attributes :\
-                                  voltageMeasureName, currentMeasureName, sourceType, and sourceFunction\
-                                  (if sourceType is not COMMON).")
-
-        # Source type "COMMON" doesn't support source functions
-        if self.sourceType == SourceType.COMMON:
-            self.sourceFunction = SourceFunction.CONSTANT
-
-        # Generate and send the command
-        command: str = "CH"+str(self.slot)+" "+self.voltageMeasureName+" "+self.currentMeasureName+" "+str(self.sourceType.value)+" "+str(self.sourceFunction.value)
-        self._write(command)
-        return
+            self.voltageMeasureName != "" and\
+            (self.sourceFunction != SourceFunction.NONE or self.smuType == SMUMode.VM) and\
+            (self.currentMeasureName != "" or self.smuType != SMUMode.SMU) and\
+            (self.sourceType != SourceType.NONE or self.smuType != SMUMode.SMU)
 
 
-    # === Getters and setters ===
+    # === Getters/Setters ===
 
     @property
-    def voltageMeasureName(self) -> str:
-        return self._voltageMeasureName
+    def smuType(self) -> SMUMode:
+        return self._smuType
     
-    @voltageMeasureName.setter
-    def voltageMeasureName(self, value: str) -> None:
-        self._voltageMeasureName = value
+    @smuType.setter
+    def smuType(self, value: SMUMode):
+        if self._smuType == value:
+            return
 
-        if self._isDefinitionOk():
-            self._setDefinition()
+        self._write("MP " + str(self.slot) + ", " + value.name + str(self.slot))
+        error: str = self._query(":ERROR:LAST:GET")
+        if error not in ["", "\n"]:
+            raise ValueError("Type changing failed : make sure 'channel number' = 'slot number' in KCon")
 
-    @property
-    def currentMeasureName(self) -> str:
-        return self._currentMeasureName
-
-    @currentMeasureName.setter
-    def currentMeasureName(self, value: str) -> None:
-        self._currentMeasureName = value
-
-        if self._isDefinitionOk():
-            self._setDefinition()
-
-    @property
-    def sourceType(self) -> SourceType:
-        return self._sourceType
-    
-    @sourceType.setter
-    def sourceType(self, value: SourceType) -> None:
-        self._sourceType = value
-
-        if self._isDefinitionOk():
-            self._setDefinition()
-
-    @property
-    def sourceFunction(self) -> SourceFunction:
-        return self._sourceFunction
-    
-    @sourceFunction.setter
-    def sourceFunction(self, value: SourceFunction) -> None:
-        self._sourceFunction = value
-
-        if self._isDefinitionOk():
-            self._setDefinition()
+        self._smuType = value

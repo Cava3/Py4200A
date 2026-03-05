@@ -5,8 +5,8 @@
 - [x] `SP` - IDK but allows to check for data ready ? Probably ?
 - [x] `DE` - # Select page "Channel Definition"
 - [x] `CH` - Full SMU definition
-- [ ] `VM` - Define as voltmeter only
-- [ ] `VS` - Define as volt source
+- [x] `VM` - Define as voltmeter only
+- [x] `VS` - Define as volt source
 - [ ] `DT` - Delay measurement during sweep (to counter the capacitive effect)
 - [ ] `FS` and `RT` - Alternative sweep settings
 - [ ] `HT` - Delay between steps before starting the sweep
@@ -30,7 +30,7 @@
 - [ ] No page required
 - [ ] `GT` - Loads data or program
 - [ ] `SV` - Save data or program
-- [ ] `MP` - Map a channel to a SMU, VS or VM
+- [x] `MP` - Map a channel to a SMU, VS or VM
 - [ ] `SR` - Set source range
 - [ ] `US` - # Select page "User Mode" (real time ?)
 - [ ] `DI` and `DV` - Define as current/voltage source
