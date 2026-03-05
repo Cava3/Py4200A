@@ -99,7 +99,7 @@ This list is non-exhaustive and lacks the different board types.
 - [ ] Constant source
 - [ ] Sweep source
 - [ ] Step source
-- [ ] Voltmeter
+- [x] Voltmeter
 
 **CVU**
 - [ ] WIP
@@ -115,7 +115,7 @@ This list is non-exhaustive and lacks the different board types.
 - [x] Connection to KI4200A-SCS through PCIB or TCPIP
 - [x] Perform basic instruction to get Model and SN from KXCI
 - [x] Listing of all the boards available
-- [ ] Correctly type the boards
+- [x] Correctly type the boards
 - [ ] Send basic setting instructions to SMUs
 - [ ] Allow test execution
 - [ ] Basic result retrieval
