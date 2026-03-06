@@ -143,6 +143,30 @@ class Communications:
 
         return response
 
+    def hasError(self) -> bool:
+        """
+        Used to query the instrument for any errors that may have occurred during the last command or query.
+
+        Returns:
+            (bool): True if an error is present, False if no error is present.
+        """
+        return self.query(":ERROR:LAST:GET") not in ("", "\n")
+
+    def getError(self) -> str:
+        """
+        Used to query the instrument for any errors that may have occurred during the last command or query.
+
+        Returns:
+            (str): The error message returned from the instrument, or an empty string if no error is present.
+        """
+        return self.query(":ERROR:LAST:GET")
+
+    def clearError(self) -> None:
+        """
+        Used to clear any errors that may have occurred during the last command or query.
+        """
+        self.write(":ERROR:LAST:CLEAR")
+
     # === Getters and setters ===
 
     @property
