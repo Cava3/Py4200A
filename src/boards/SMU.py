@@ -191,8 +191,9 @@ class SMU(Board):
             return
 
         self._write("MP " + str(self.slot) + ", " + value.name + str(self.slot))
-        error: str = self._query(":ERROR:LAST:GET")
-        if error not in ["", "\n"]:
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
             raise ValueError("Type changing failed : make sure 'channel number' = 'slot number' in KCon")
 
         self._smuType = value
