@@ -27,6 +27,7 @@ class SMU(Board):
         sourceFunction (consts.SourceFunction): The function to apply to the source (SWEEP, STEP, CONSTANT)
     """
 
+    # === Creation ===
     def __init__(self, name: str, comm: Communications) -> None:
         """
         Initialize an SMU instance with the given name and set its type to BoardType.SMU.
@@ -34,6 +35,7 @@ class SMU(Board):
         Args:
             name (str): The name of the SMU board (e.g., "SMU1", "SMU2").
         """
+        # General usage
         self.status = Status.INITIALIZING
         self._name: str = name
         self.hp: bool = "HP" in name.upper()
@@ -42,6 +44,7 @@ class SMU(Board):
         self._slot: int = int(slot_str) if slot_str.isdigit() else -1
         self.board_type: BoardType = BoardType.SMU
 
+        # Channel definition
         self._smuType: SMUMode = SMUMode.VM if "SMU" in name.upper() else SMUMode.VS if "VS" in name.upper() else SMUMode.SMU
         self.voltageMeasureName: str = self.name+"V"
         self.currentMeasureName: str = self.name+"I"
@@ -78,6 +81,7 @@ class SMU(Board):
         """
         A function to deactivate (reset/power off) the SMU.
         """
+        self.smuType = SMUMode.SMU
         self._write("DE")
         self._write("CH"+str(self.slot))
 
@@ -102,7 +106,7 @@ class SMU(Board):
         # Generate and send the commands
         self.smuType = SMUMode.VM
         self._write("DE")
-        self._write("VM" + str(self.slot) + " '" + self.voltageMeasureName + "'")
+        self._write("VM" + str(self.slot) + ", '" + self.voltageMeasureName + "'")
         return
     
     def setupVoltageSource(self, voltageMeasureName: str = "", sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
@@ -128,7 +132,7 @@ class SMU(Board):
         # Generate and send the commands
         self.smuType = SMUMode.VS
         self._write("DE")
-        self._write("VS" + str(self.slot) + " '" + self.voltageMeasureName + "' " + str(self.sourceFunction.value))
+        self._write("VS" + str(self.slot) + ", '" + self.voltageMeasureName + "', " + str(self.sourceFunction.value))
     
     def setupSMU(self, voltageMeasureName: str = "", currentMeasureName: str = "", sourceType: SourceType = SourceType.NONE, sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
         """
@@ -161,28 +165,53 @@ class SMU(Board):
 
         # Generate and send the commands
         self.smuType = SMUMode.SMU
-        command: str = "CH" + str(self.slot) + " '" + self.voltageMeasureName + "' '" + self.currentMeasureName +\
-                       "' " + str(self.sourceType.value) + " " + str(self.sourceFunction.value)
+        command: str = "CH" + str(self.slot) + ", '" + self.voltageMeasureName + "', '" + self.currentMeasureName +\
+                       "', " + str(self.sourceType.value) + ", " + str(self.sourceFunction.value)
         self._write("DE")
         self._write(command)
         return
 
-    # === Factory ===
-
-    @classmethod
-    def of(cls, board: Board) -> "SMU":
+    # Source setup
+    def constantSourceValue(self, value: float = 0.0, compliance: float = 0.0) -> None:
         """
-        Create an SMU instance from a generic Board instance.
+        Sets the source value of the SMU to a constant value. The source value can be either current
+        or voltage depending on the sourceType attribute.
 
         Args:
-            board (Board): The generic Board instance to convert to an SMU.
-
-        Returns:
-            SMU: An instance of the SMU class.
+            value (float): The value to set for the source. Defaults to self.currentValue or self.voltageValue.
+            compliance (float): The compliance value to set for the source. Defaults to self.compliance.
         """
-        smu = SMU(board.name, comm=board._comm)
-        smu.status = board.status
-        return smu
+        self._write("DE")
+        # No source for VM type
+        if self.smuType == SMUMode.VM:
+            raise AttributeError("VM type SMU cannot source current nor voltage")
+        
+        # VS has a special command
+        elif self.smuType == SMUMode.VS and self.sourceFunction == SourceFunction.CONSTANT:
+            self.voltageValue = value if value != 0.0 else self.voltageValue
+            self._write("CS" + str(self.slot) + ", " + str(self.voltageValue))
+
+        # For SMU, the command depends on the sourceFunction and sourceType
+        elif self.sourceFunction == SourceFunction.CONSTANT and self.sourceType in [SourceType.AMPERE, SourceType.VOLT]:
+            prefix: str = "VC" if self.sourceType == SourceType.VOLT else "IC"
+
+            # Save attributes + minmax them
+            if self.sourceType == SourceType.VOLT:
+                self.voltageValue = value if value != 0.0 else self.voltageValue
+                value = self.voltageValue
+                self.complianceV = compliance if compliance != 0.0 else self.complianceV
+                compliance = self.complianceV
+            else:
+                self.currentValue = value if value != 0.0 else self.currentValue
+                value = self.currentValue
+                self.complianceI = compliance if compliance != 0.0 else self.complianceI
+                compliance = self.complianceI
+
+            self._write(prefix + str(self.slot) + ", " + str(value) + ", " + str(compliance))
+
+        # For other source functions
+        else:
+            raise AttributeError("For source functions other than CONSTANT, please use sweepValues or stepValues.")
 
     # === Private / Utils ===
 
@@ -222,3 +251,39 @@ class SMU(Board):
             raise ValueError("Type changing failed : make sure 'channel number' = 'slot number' in KCon")
 
         self._smuType = value
+
+    @property
+    def voltageValue(self) -> float:
+        return self._voltageValue
+    
+    @voltageValue.setter
+    def voltageValue(self, value: float):
+        minmax: tuple[float, float] = (-210.0, 210.0)
+        self._voltageValue = min(max(value, minmax[0]), minmax[1])
+    
+    @property
+    def currentValue(self) -> float:
+        return self._currentValue
+    
+    @currentValue.setter
+    def currentValue(self, value: float):
+        minmax: tuple[float, float] = (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
+        self._currentValue = min(max(value, minmax[0]), minmax[1])
+
+    @property
+    def complianceV(self) -> float:
+        return self._compliance
+    
+    @complianceV.setter
+    def complianceV(self, value: float):
+        minmax: tuple[float, float] = (-210.0, 210.0)
+        self._compliance = min(max(value, minmax[0]), minmax[1])
+
+    @property
+    def complianceI(self) -> float:
+        return self._compliance
+    
+    @complianceI.setter
+    def complianceI(self, value: float):
+        minmax: tuple[float, float] = (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
+        self._compliance = min(max(value, minmax[0]), minmax[1])
