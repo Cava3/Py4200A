@@ -49,6 +49,31 @@ class SMU(Board):
         self.sourceFunction: SourceFunction = SourceFunction.NONE
         self.status= Status.READY
 
+        #Source setup
+        self._voltageValue: float = 0.0
+        self._currentValue: float = 0.0
+        self._compliance: float = 0.0
+
+    # === Factory ===
+
+
+    @classmethod
+    def of(cls, board: Board) -> "SMU":
+        """
+        Create an SMU instance from a generic Board instance.
+
+        Args:
+            board (Board): The generic Board instance to convert to an SMU.
+
+        Returns:
+            SMU: An instance of the SMU class.
+        """
+        smu = SMU(board.name, comm=board._comm)
+        smu.status = board.status
+        return smu
+
+    # === Public ===
+    # Channel definition
     def deactivate(self):
         """
         A function to deactivate (reset/power off) the SMU.
