@@ -27,9 +27,9 @@
 - [ ] `YA` and `YB` - Set Y1 and Y2 measurements to display
 - [ ] `MD` - # Select page "Measurement control"
 - [ ] `ME` - Run test
-- [ ] No page required
 - [ ] `GT` - Loads data or program
 - [ ] `SV` - Save data or program
+- [ ] No page required
 - [x] `MP` - Map a channel to a SMU, VS or VM
 - [ ] `SR` - Set source range
 - [ ] `US` - # Select page "User Mode" (real time ?)
