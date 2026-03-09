@@ -7,6 +7,7 @@ The class uses the Communications class from the instrcomms module to handle low
 and provides user with high-level OOP to interact with the instrument in a more intuitive way.
 """
 
+from .Display import Display
 from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
@@ -23,6 +24,7 @@ class KI4200A:
         read_termination (str): The termination character(s) used when reading responses from the instrument
         status (Status): Current status of the instrument (e.g., "Initializing", "Connected", "Configuring").
         write_termination (str): The termination character(s) used when writing commands to the instrument.
+        display (Display): The display controller for managing the instrument's display.
     """
 
     def __init__(self, instrument_resource_string: str) -> None:
@@ -53,6 +55,7 @@ class KI4200A:
 
         self.status = Status.CONNECTING
         self._comms.connect()
+        self.display = Display(self._comms)
 
         self.status = Status.CONFIGURING
         self.write_termination = "\0"
@@ -82,6 +85,11 @@ class KI4200A:
 
         self._l_equipped = self.query("*OPT?").split(",")
 
+        if self._comms.hasError():
+            print(self.getError())
+            self._comms.clearError()
+            raise ValueError("Error during instrument scan. Please check the connection and try again.")
+
         # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns \
         # FIXME: the second one. The first one is also displayed on KCon, so definitely a KXCI issue.
         # FIXME: Can be removed if fixed in more recent versions of KXCI
@@ -100,6 +108,12 @@ class KI4200A:
         self.write("BC") # Clear buffer
         self.write(":ERROR:LAST:CLEAR") # Clear last error
         self.write("*RST") # Reset instruments
+
+        if self._comms.hasError():
+            print(self.getError())
+            self._comms.clearError()
+            raise ValueError("Error during instrument reset. Please check the connection and try again.")
+
         self.status = Status.READY
 
     def getError(self) -> str:
@@ -180,7 +194,8 @@ class KI4200A:
             return SMU.of(b)
         elif b.board_type == BoardType.CVU :
             return CVU.of(b)
-
+        elif b.board_type == BoardType.PMU_RPM :
+            return PMU_RPM.of(b)
 
         return b
 

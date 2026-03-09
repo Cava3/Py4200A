@@ -4,7 +4,7 @@
 """
 
 import pyvisa as visa
-
+from .error import KXCIError
 
 class Communications:
     """
@@ -142,6 +142,39 @@ class Communications:
             print(visaerr)
 
         return response
+
+    def hasError(self) -> bool:
+        """
+        Used to query the instrument for any errors that may have occurred during the last command or query.
+
+        Returns:
+            (bool): True if an error is present, False if no error is present.
+        """
+        return self.query(":ERROR:LAST:GET") not in ("", "\n")
+
+    def getError(self) -> str:
+        """
+        Used to query the instrument for any errors that may have occurred during the last command or query.
+
+        Returns:
+            (str): The error message returned from the instrument, or an empty string if no error is present.
+        """
+        return self.query(":ERROR:LAST:GET")
+
+    def clearError(self) -> None:
+        """
+        Used to clear any errors that may have occurred during the last command or query.
+        """
+        self.write(":ERROR:LAST:CLEAR")
+
+    def checkForError(self) -> None:
+        """
+        Used to check for any errors that may have occurred during the last command or query and raise an exception if an error is present.
+        """
+        if self.hasError():
+            error_message = self.getError()
+            self.clearError()
+            raise KXCIError(message=error_message)
 
     # === Getters and setters ===
 

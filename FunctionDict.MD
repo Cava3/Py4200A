@@ -10,12 +10,12 @@
 - [ ] `DT` - Delay measurement during sweep (to counter the capacitive effect)
 - [ ] `FS` and `RT` - Alternative sweep settings
 - [ ] `HT` - Delay between steps before starting the sweep
-- [ ] `SC` - Constant voltage value (VS only)
-- [ ] `ST` - Cut or keep power after test
-- [ ] `VC` and `IC` - Constant voltage/intensity value
-- [ ] `VL` and `IL` - Sweep list values
-- [ ] `VP` and `IP` - Step settings
-- [ ] `VR` and `IR` - Sweep function
+- [x] `SC` - Constant voltage value (VS only)
+- [x] `ST` - Cut or keep power after test
+- [x] `VC` and `IC` - Constant voltage/intensity value
+- [x] `VL` and `IL` - Sweep list values
+- [x] `VP` and `IP` - Step settings
+- [x] `VR` and `IR` - Sweep function
 - [ ] `SM` - # Select page "Measurement setup"
 - [ ] `DM` - Select between table and graph display mode
 - [ ] `IN` - Set time between measurements for time-based measurements
@@ -27,9 +27,9 @@
 - [ ] `YA` and `YB` - Set Y1 and Y2 measurements to display
 - [ ] `MD` - # Select page "Measurement control"
 - [ ] `ME` - Run test
-- [ ] No page required
 - [ ] `GT` - Loads data or program
 - [ ] `SV` - Save data or program
+- [ ] No page required
 - [x] `MP` - Map a channel to a SMU, VS or VM
 - [ ] `SR` - Set source range
 - [ ] `US` - # Select page "User Mode" (real time ?)

@@ -43,3 +43,15 @@ class Status(Enum):
     READY = "Ready"
     READY_NOT_RESET = "Ready, not reset"
     DISCONNECTED = "Disconnected"
+
+class SweepType(Enum):
+    """Enum of possible sweep types"""
+    LINEAR = 1
+    LOG10 = 2
+    LOG25 = 3
+    LOG50 = 4
+
+class DisplayMode(Enum):
+    """Enum for the 2 possible display modes"""
+    GRAPH = 1
+    LIST = 2
