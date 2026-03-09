@@ -6,7 +6,7 @@ This module defines the KI4200A class, which provides methods to control the Kei
 The class uses the Communications class from the instrcomms module to handle low-level communication, \
 and provides user with high-level OOP to interact with the instrument in a more intuitive way.
 """
-
+# TODO: keep track of all measurements
 from .Display import Display
 from .instrcomms import Communications
 from .boards.Board import Board

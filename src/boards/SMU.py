@@ -408,9 +408,7 @@ class SMU(Board):
             return
 
         self._write("MP " + str(self.slot) + ", " + value.name + str(self.slot))
-
         self._comm.checkForError()
-
         self._smuType = value
 
     @property
@@ -440,10 +438,9 @@ class SMU(Board):
 
     @poweroffAfterTest.setter
     def poweroffAfterTest(self, value: bool):
+        self._write("DE")
         self._write("ST " + str(self.slot) + ", " + str(int(value)))
-
         self._comm.checkForError()
-
         self._poweroff_after_test = value
 
     @property

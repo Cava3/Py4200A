@@ -17,9 +17,9 @@
 - [x] `VP` and `IP` - Step settings
 - [x] `VR` and `IR` - Sweep function
 - [ ] `SM` - # Select page "Measurement setup"
-- [ ] `DM` - Select between table and graph display mode
+- [x] `DM` - Select between table and graph display mode
 - [ ] `IN` - Set time between measurements for time-based measurements
-- [ ] `LI` - Select measurements to be shown in table display mode
+- [x] `LI` - Select measurements to be shown in table display mode
 - [ ] `NR` - Amount of measurements for time-based measurements
 - [ ] `WT` - Wait time, unsure of true function
 - [ ] `XN` - Set X axis measurements to display
