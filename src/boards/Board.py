@@ -8,6 +8,7 @@ SMUs, PMUs) that can be equipped in the KI4200A. The Board class provides common
 that can be inherited and extended by specific board classes, allowing for a structured and modular \
 approach to representing the various components of the instrument.
 """
+from ..results import Measurement
 from ..consts import Status, BoardType
 from ..instrcomms import Communications
 
@@ -20,6 +21,7 @@ class Board:
         name (str): The name of the board (e.g., "SMU1", "PMU2")
         status (str): Current status of the board (e.g., "Idle", "Measuring", "Error")
         slot (int): The slot number where the SMU is installed in the instrument
+        measurements (list[Measurement]): List of measurements associated with this board (e.g., voltage, current)
     """
 
     def __init__(self, name: str, comm: Communications) -> None:
@@ -34,11 +36,12 @@ class Board:
         self.board_type: BoardType = BoardType.NONE
         self._slot = 0
         self._comm = comm
+        self.measurements: list[Measurement] = []
         self.status = Status.CONFIGURING
-        self.detect_type()
+        self.detectType()
         self.status = Status.READY
 
-    def detect_type(self) -> None:
+    def detectType(self) -> None:
         """
         Detect the type of the board based on its name and set the type attribute accordingly.
         This method can be extended to include more specific detection logic based on the instrument's \

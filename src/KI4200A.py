@@ -7,7 +7,7 @@ The class uses the Communications class from the instrcomms module to handle low
 and provides user with high-level OOP to interact with the instrument in a more intuitive way.
 """
 # TODO: keep track of all measurements
-from .Display import Display
+from .results import Display, Measurement
 from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
@@ -25,6 +25,7 @@ class KI4200A:
         status (Status): Current status of the instrument (e.g., "Initializing", "Connected", "Configuring").
         write_termination (str): The termination character(s) used when writing commands to the instrument.
         display (Display): The display controller for managing the instrument's display.
+        all_measurements (list[Measurement]): A list to keep track of all measurements configured on the instrument.
     """
 
     def __init__(self, instrument_resource_string: str) -> None:
@@ -42,6 +43,8 @@ class KI4200A:
         self.id: dict[str, str]
         self.status: Status             # KI4200A's current task or state
         self.l_equipment: list[Board]   # List of board objects equipped in the instrument
+        self.display: Display           # Display controller for managing the instrument's display
+        self.all_measurements: list[Measurement] # List of all measurements configured on the instrument
         
         #Private
         self._comms: Communications
@@ -70,6 +73,7 @@ class KI4200A:
             "Software Version": ""    
         }
         self.scan()
+        self.all_measurements = [measurement for board in self.l_equipment for measurement in board.measurements]
 
         self.status = Status.READY_NOT_RESET
 
@@ -84,11 +88,7 @@ class KI4200A:
         self.id["Brand"], self.id["Model"], self.id["Serial Number"], self.id["Software Version"] = idn[:4]
 
         self._l_equipped = self.query("*OPT?").split(",")
-
-        if self._comms.hasError():
-            print(self.getError())
-            self._comms.clearError()
-            raise ValueError("Error during instrument scan. Please check the connection and try again.")
+        self._comms.checkForError()
 
         # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns \
         # FIXME: the second one. The first one is also displayed on KCon, so definitely a KXCI issue.
@@ -98,8 +98,8 @@ class KI4200A:
 
         # List and convert the boards
         l_boards: list[Board] = [Board(name=board_name, comm=self._comms) for board_name in self._l_equipped]
-        self.l_equipment = [self._type_board(board) for board in l_boards]
-
+        self.l_equipment = [self._typeBoard(board) for board in l_boards]
+        
 
     def reset(self) -> None:
         """
@@ -109,10 +109,7 @@ class KI4200A:
         self.write(":ERROR:LAST:CLEAR") # Clear last error
         self.write("*RST") # Reset instruments
 
-        if self._comms.hasError():
-            print(self.getError())
-            self._comms.clearError()
-            raise ValueError("Error during instrument reset. Please check the connection and try again.")
+        self._comms.checkForError()
 
         self.status = Status.READY
 
@@ -179,7 +176,7 @@ class KI4200A:
 
     # === Private ===
 
-    def _type_board(self, b: Board) -> Board :
+    def _typeBoard(self, b: Board) -> Board :
         """
         A function to auto-type a board. Called upon board detection
 
