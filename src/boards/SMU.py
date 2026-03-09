@@ -7,7 +7,7 @@ type of board (an SMU) equipped in the KI4200A. The SMU class provides methods a
 to SMUs, such as voltage and current measurement capabilities.
 """
 from .Board import Board
-from ..consts import Status, BoardType, SourceType, SourceFunction, SMUMode
+from ..consts import Status, BoardType, SourceType, SourceFunction, SMUMode, SweepType
 from ..instrcomms import Communications
 
 class SMU(Board):
@@ -51,12 +51,18 @@ class SMU(Board):
         self.currentMeasureName: str = self.name+"I"
         self.sourceType: SourceType = SourceType.NONE
         self.sourceFunction: SourceFunction = SourceFunction.NONE
-        self.status= Status.READY
 
         #Source setup
-        self._voltageValue: float = 0.0
-        self._currentValue: float = 0.0
         self._compliance: float = 0.0
+        
+        self._constantValue: float = 0.0
+
+        self._funcStart: float = 0.0
+        self._funcStop: float = 0.0
+        self._funcStep: float = 0.0
+        self.sweepType: SweepType = SweepType.LINEAR
+
+        self.status= Status.READY
 
     # === Factory ===
 
@@ -196,7 +202,7 @@ class SMU(Board):
             raise ValueError("SMU setup failed. Please check the settings and try again.")
 
     # Source setup
-    def constantSourceValue(self, value: float = 0.0, compliance: float = 0.0) -> None:
+    def setConstantSourceValue(self, value: float = 0.0, compliance: float = 0.0) -> None:
         """
         Sets the source value of the SMU to a constant value. The source value can be either current
         or voltage depending on the sourceType attribute.
@@ -227,13 +233,13 @@ class SMU(Board):
             if self.sourceType == SourceType.VOLT:
                 self.voltageValue = value if value != 0.0 else self.voltageValue
                 value = self.voltageValue
-                self.complianceV = compliance if compliance != 0.0 else self.complianceV
-                compliance = self.complianceV
+                self.compliance = compliance if compliance != 0.0 else self.compliance
+                compliance = self.compliance
             else:
                 self.currentValue = value if value != 0.0 else self.currentValue
                 value = self.currentValue
-                self.complianceI = compliance if compliance != 0.0 else self.complianceI
-                compliance = self.complianceI
+                self.compliance = compliance if compliance != 0.0 else self.compliance
+                compliance = self.compliance
 
             self._write(prefix + str(self.slot) + ", " + str(value) + ", " + str(compliance))
 
@@ -246,7 +252,51 @@ class SMU(Board):
             self._comm.clearError()
             raise ValueError("Setting constant source value failed.")
 
-    # TODO: Sweep, Step and lists
+
+    def setSweepFunction(self, sweepType: SweepType = SweepType.LINEAR, start: float = 0.0, stop: float = 0.0, step: float = 0.0, compliance: float = 0.0) -> None:
+        """
+        Sets the source function of the SMU to a sweep function. The source can be either current
+        or voltage depending on the sourceType attribute.
+
+        Args:
+            sweepType (SweepType): The type of sweep to perform (linear, log10, log25, log50). Defaults to SweepType.LINEAR.
+            start (float): The starting value of the sweep. Defaults to 0.0.
+            stop (float): The stopping value of the sweep. Defaults to 0.0.
+            step (float): The step value of the sweep. Defaults to 0.0.
+            compliance (float): The compliance value to set for the source. Defaults to self.compliance.
+
+        Raises:
+            AttributeError: If the SMU settings are not properly defined.
+            ValueError: If the instrument returns an error after sending the command.
+        """
+        # Attribute checking
+        if self.smuType == SMUMode.VM:
+            raise AttributeError("VM type SMU cannot source current nor voltage, thus cannot perform sweeps.")
+        elif self.sourceFunction != SourceFunction.SWEEP:
+            raise AttributeError("Source function must be set to SWEEP to use this method.")
+        elif self.sourceType not in [SourceType.AMPERE, SourceType.VOLT]:
+            raise AttributeError("Source type must be set to AMPERE or VOLT to use this method.")
+
+        # Save attributes
+        self.funcStart = start if start != 0.0 else self.funcStart
+        self.funcStop = stop if stop != 0.0 else self.funcStop
+        self.funcStep = step if step != 0.0 else self.funcStep
+        self.compliance = compliance if compliance != 0.0 else self.compliance
+        self.sweepType = sweepType
+
+        # Generate command
+        prefix: str = "VR" if self.smuType == SMUMode.VS else "IR"
+        command: str = prefix + str(self.sweepType.value) + ", " + str(self.funcStart) + ", " +\
+              str(self.funcStop) + ", " + str(self.funcStep) + ", " + str(self.compliance)
+
+        self._write(command)
+
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
+            raise ValueError("Setting sweep function failed.")
+
+    # TODO: Step and lists
 
     # === Private / Utils ===
 
@@ -289,39 +339,24 @@ class SMU(Board):
         self._smuType = value
 
     @property
-    def voltageValue(self) -> float:
-        return self._voltageValue
+    def constantValue(self) -> float:
+        return self._constantValue
     
-    @voltageValue.setter
-    def voltageValue(self, value: float):
-        minmax: tuple[float, float] = (-210.0, 210.0)
-        self._voltageValue = min(max(value, minmax[0]), minmax[1])
-    
-    @property
-    def currentValue(self) -> float:
-        return self._currentValue
-    
-    @currentValue.setter
-    def currentValue(self, value: float):
-        minmax: tuple[float, float] = (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
-        self._currentValue = min(max(value, minmax[0]), minmax[1])
+    @constantValue.setter
+    def constantValue(self, value: float):
+        if self.sourceFunction != SourceFunction.CONSTANT:
+            raise AttributeError("Source function must be set to CONSTANT to use this attribute.")
+
+        minmax: tuple[float, float] = (-210.0, 210.0) if self.sourceType == SourceType.VOLT else (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
+        self._constantValue = min(max(value, minmax[0]), minmax[1])
 
     @property
-    def complianceV(self) -> float:
+    def compliance(self) -> float:
         return self._compliance
-    
-    @complianceV.setter
-    def complianceV(self, value: float):
-        minmax: tuple[float, float] = (-210.0, 210.0)
-        self._compliance = min(max(value, minmax[0]), minmax[1])
 
-    @property
-    def complianceI(self) -> float:
-        return self._compliance
-    
-    @complianceI.setter
-    def complianceI(self, value: float):
-        minmax: tuple[float, float] = (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
+    @compliance.setter
+    def compliance(self, value: float):
+        minmax: tuple[float, float] = (-210.0, 210.0) if self.sourceType == SourceType.VOLT else (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
         self._compliance = min(max(value, minmax[0]), minmax[1])
 
     @property
@@ -338,3 +373,12 @@ class SMU(Board):
             raise ValueError("Poweroff after test setting failed to set.")
 
         self._poweroff_after_test = value
+
+    @property
+    def funcStart(self) -> float:
+        return self._funcStart
+
+    @funcStart.setter
+    def funcStart(self, value: float):
+        minmax: tuple[float, float] = (-210.0, 210.0) if self.sourceType == SourceType.VOLT else (-1.05, 1.05) if self.hp else (-0.105, 0.105)
+        self._funcStart = min(max(value, minmax[0]), minmax[1])

@@ -11,11 +11,11 @@
 - [ ] `FS` and `RT` - Alternative sweep settings
 - [ ] `HT` - Delay between steps before starting the sweep
 - [x] `SC` - Constant voltage value (VS only)
-- [ ] `ST` - Cut or keep power after test
+- [x] `ST` - Cut or keep power after test
 - [x] `VC` and `IC` - Constant voltage/intensity value
 - [ ] `VL` and `IL` - Sweep list values
 - [ ] `VP` and `IP` - Step settings
-- [ ] `VR` and `IR` - Sweep function
+- [x] `VR` and `IR` - Sweep function
 - [ ] `SM` - # Select page "Measurement setup"
 - [ ] `DM` - Select between table and graph display mode
 - [ ] `IN` - Set time between measurements for time-based measurements
