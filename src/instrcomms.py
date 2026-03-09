@@ -4,7 +4,7 @@
 """
 
 import pyvisa as visa
-
+from .error import KXCIError
 
 class Communications:
     """
@@ -166,6 +166,15 @@ class Communications:
         Used to clear any errors that may have occurred during the last command or query.
         """
         self.write(":ERROR:LAST:CLEAR")
+
+    def checkForError(self) -> None:
+        """
+        Used to check for any errors that may have occurred during the last command or query and raise an exception if an error is present.
+        """
+        if self.hasError():
+            error_message = self.getError()
+            self.clearError()
+            raise KXCIError(message=error_message)
 
     # === Getters and setters ===
 

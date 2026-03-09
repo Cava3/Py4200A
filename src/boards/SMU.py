@@ -90,16 +90,13 @@ class SMU(Board):
         A function to deactivate (reset/power off) the SMU.
 
         Raises:
-            ValueError: If the instrument returns an error after sending the command.
+            KXCIError: If the instrument returns an error after sending the command.
         """
         self.smuType = SMUMode.SMU
         self._write("DE")
         self._write("CH"+str(self.slot))
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("Deactivation failed. Please check the settings and try again.")
+        self._comm.checkForError()
 
     def setupVoltmeter(self, voltageMeasureName: str = "") -> None:
         """
@@ -110,7 +107,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined. currentMeasureName cannot be empty.
-            ValueError: If the instrument returns an error after sending the command.
+            KXCIError: If the instrument returns an error after sending the command.
         """
         # Store the measurement name
         self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
@@ -125,10 +122,7 @@ class SMU(Board):
         self._write("DE")
         self._write("VM" + str(self.slot) + ", '" + self.voltageMeasureName + "'")
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("Voltmeter setup failed. Please check the settings and try again.")
+        self._comm.checkForError()
     
     def setupVoltageSource(self, voltageMeasureName: str = "", sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
         """
@@ -140,7 +134,7 @@ class SMU(Board):
         
         Raises:
             AttributeError: If the SMU settings are not properly defined. currentMeasureName and sourceFunction are required.
-            ValueError: If the instrument returns an error after sending the command.
+            KXCIError: If the instrument returns an error after sending the command.
         """
         # Attribute saving
         self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
@@ -156,10 +150,7 @@ class SMU(Board):
         self._write("DE")
         self._write("VS" + str(self.slot) + ", '" + self.voltageMeasureName + "', " + str(self.sourceFunction.value))
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("Voltage source setup failed. Please check the settings and try again.")
+        self._comm.checkForError()
     
     def setupSMU(self, voltageMeasureName: str = "", currentMeasureName: str = "", sourceType: SourceType = SourceType.NONE, sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
         """
@@ -173,7 +164,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined. All attributes are required for SMU type.
-            ValueError: If the instrument returns an error after sending the command.
+            KXCIError: If the instrument returns an error after sending the command.
         """
         # Attribute saving
         self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
@@ -197,10 +188,7 @@ class SMU(Board):
         self._write("DE")
         self._write(command)
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("SMU setup failed. Please check the settings and try again.")
+        self._comm.checkForError()
 
     # Source setup
     def setConstantSourceValue(self, value: float = 0.0, compliance: float = 0.0) -> None:
@@ -214,7 +202,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined (SMUmode and sourceFunction).
-            ValueError: If the instrument returns an error after sending the command.
+            KXCIError: If the instrument returns an error after sending the command.
         """
         self._write("DE")
         # No source for VM type
@@ -248,10 +236,7 @@ class SMU(Board):
         else:
             raise AttributeError("For source functions other than CONSTANT, please use sweepValues or stepValues.")
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("Setting constant source value failed.")
+        self._comm.checkForError()
 
 
     def setSweepFunction(self, sweepType: SweepType = SweepType.LINEAR, start: float = 0.0, stop: float = 0.0, step: float = 0.0, compliance: float = 0.0) -> None:
@@ -268,7 +253,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined.
-            ValueError: If the instrument returns an error after sending the command.
+            KXCIError: If the instrument returns an error after sending the command.
         """
         # Attribute checking
         if self.smuType == SMUMode.VM or (self.smuType == SMUMode.VS and self.sourceType != SourceType.VOLT):
@@ -293,10 +278,7 @@ class SMU(Board):
         self._write("DE")
         self._write(command)
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("Setting sweep function failed.")
+        self._comm.checkForError()
 
     def setStepFunction2(self, start: float = 0.0, step: float = 0.0, numSteps: int = 0, compliance: float = 0.0) -> None:
         """
@@ -311,7 +293,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined.
-            ValueError: If the instrument returns an error after sending the command.
+            KXCIError: If the instrument returns an error after sending the command.
         """
         # Attribute checking
         if self.smuType == SMUMode.VM or (self.smuType == SMUMode.VS and self.sourceType != SourceType.VOLT):
@@ -335,10 +317,7 @@ class SMU(Board):
         self._write("DE")
         self._write(command)
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("Setting step function failed.")
+        self._comm.checkForError()
 
     def setStepFunction(self, start: float = 0.0, stop: float = 0.0, step: int = 0, compliance: float = 0.0) -> None:
         """
@@ -355,12 +334,47 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined.
-            ValueError: If the instrument returns an error after sending the command.
+            KXCIError: If the instrument returns an error after sending the command.
         """
         numStep = int(abs(stop - start) / step) if step != 0 else 0
         self.setStepFunction2(start = start, step = step, numSteps = numStep, compliance = compliance)
 
-    # TODO: Lists
+    def setListSweep(self, values: list[float], compliance: float = 0.0, master: bool = False) -> None:
+        """
+        Sets the source function of the SMU to a list sweep function. The source can be either current
+        or voltage depending on the sourceType attribute.
+
+        Args:
+            list (list[float]): The list of values to sweep through.
+            compliance (float): The compliance value to set for the source. Defaults to self.compliance.
+
+        Raises:
+            AttributeError: If the SMU settings are not properly defined.
+            ValueError: If the list is empty or too long.
+            KXCIError: If the instrument returns an error after sending the command.
+        """
+        # Attribute checking
+        if self.smuType == SMUMode.VM or (self.smuType == SMUMode.VS and self.sourceType != SourceType.VOLT):
+            raise AttributeError("SMU type and source unit are not compatible.")
+        elif self.sourceFunction != SourceFunction.SWEEP:
+            raise AttributeError("Source function must be set to SWEEP to use this method.")
+        elif self.sourceType not in [SourceType.AMPERE, SourceType.VOLT]:
+            raise AttributeError("Source type must be set to AMPERE or VOLT to use this method.")
+        elif len(values) == 0 or len(values) > 4096:
+            raise ValueError("Values list must contain between 1 and 4096 values.")
+
+        # Save attributes
+        self.compliance = compliance if compliance != 0.0 else self.compliance
+
+        # Generate command
+        prefix: str = "VL" if self.smuType == SMUMode.VS else "IL"
+        list_str: str = ", ".join([str(x) for x in values])
+        command: str = prefix + str(self.slot) + ", " + str(int(master)) + ", " + str(self.compliance) + ", " + list_str
+
+        self._write("DE")
+        self._write(command)
+
+        self._comm.checkForError()
 
     # === Private / Utils ===
 
@@ -395,10 +409,7 @@ class SMU(Board):
 
         self._write("MP " + str(self.slot) + ", " + value.name + str(self.slot))
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("Type changing failed : make sure 'channel number' = 'slot number' in KCon")
+        self._comm.checkForError()
 
         self._smuType = value
 
@@ -420,7 +431,7 @@ class SMU(Board):
 
     @compliance.setter
     def compliance(self, value: float):
-        minmax: tuple[float, float] = (-210.0, 210.0) if self.sourceType == SourceType.VOLT else (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
+        minmax: tuple[float, float] = (-210.0, 210.0) if self.sourceType == SourceType.AMPERE else (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
         self._compliance = min(max(value, minmax[0]), minmax[1])
 
     @property
@@ -431,10 +442,7 @@ class SMU(Board):
     def poweroffAfterTest(self, value: bool):
         self._write("ST " + str(self.slot) + ", " + str(int(value)))
 
-        if self._comm.hasError():
-            print(self._comm.getError())
-            self._comm.clearError()
-            raise ValueError("Poweroff after test setting failed to set.")
+        self._comm.checkForError()
 
         self._poweroff_after_test = value
 

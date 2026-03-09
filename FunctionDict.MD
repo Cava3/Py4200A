@@ -13,8 +13,8 @@
 - [x] `SC` - Constant voltage value (VS only)
 - [x] `ST` - Cut or keep power after test
 - [x] `VC` and `IC` - Constant voltage/intensity value
-- [ ] `VL` and `IL` - Sweep list values
-- [ ] `VP` and `IP` - Step settings
+- [x] `VL` and `IL` - Sweep list values
+- [x] `VP` and `IP` - Step settings
 - [x] `VR` and `IR` - Sweep function
 - [ ] `SM` - # Select page "Measurement setup"
 - [ ] `DM` - Select between table and graph display mode
