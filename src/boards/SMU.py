@@ -43,6 +43,7 @@ class SMU(Board):
         self._comm = comm
         self._slot: int = int(slot_str) if slot_str.isdigit() else -1
         self.board_type: BoardType = BoardType.SMU
+        self._poweroff_after_test: bool = True
 
         # Channel definition
         self._smuType: SMUMode = SMUMode.VM if "SMU" in name.upper() else SMUMode.VS if "VS" in name.upper() else SMUMode.SMU
@@ -80,10 +81,18 @@ class SMU(Board):
     def deactivate(self):
         """
         A function to deactivate (reset/power off) the SMU.
+
+        Raises:
+            ValueError: If the instrument returns an error after sending the command.
         """
         self.smuType = SMUMode.SMU
         self._write("DE")
         self._write("CH"+str(self.slot))
+
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
+            raise ValueError("Deactivation failed. Please check the settings and try again.")
 
     def setupVoltmeter(self, voltageMeasureName: str = "") -> None:
         """
@@ -94,6 +103,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined. currentMeasureName cannot be empty.
+            ValueError: If the instrument returns an error after sending the command.
         """
         # Store the measurement name
         self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
@@ -107,7 +117,11 @@ class SMU(Board):
         self.smuType = SMUMode.VM
         self._write("DE")
         self._write("VM" + str(self.slot) + ", '" + self.voltageMeasureName + "'")
-        return
+
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
+            raise ValueError("Voltmeter setup failed. Please check the settings and try again.")
     
     def setupVoltageSource(self, voltageMeasureName: str = "", sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
         """
@@ -119,6 +133,7 @@ class SMU(Board):
         
         Raises:
             AttributeError: If the SMU settings are not properly defined. currentMeasureName and sourceFunction are required.
+            ValueError: If the instrument returns an error after sending the command.
         """
         # Attribute saving
         self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
@@ -133,6 +148,11 @@ class SMU(Board):
         self.smuType = SMUMode.VS
         self._write("DE")
         self._write("VS" + str(self.slot) + ", '" + self.voltageMeasureName + "', " + str(self.sourceFunction.value))
+
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
+            raise ValueError("Voltage source setup failed. Please check the settings and try again.")
     
     def setupSMU(self, voltageMeasureName: str = "", currentMeasureName: str = "", sourceType: SourceType = SourceType.NONE, sourceFunction: SourceFunction = SourceFunction.NONE) -> None:
         """
@@ -145,8 +165,8 @@ class SMU(Board):
             sourceFunction (SourceFunction): The source functions to use (sweep, step, constant). Defaults to self.sourceFunction
 
         Raises:
-            AttributeError: If the SMU settings are not properly defined. sourceType and sourceFunction\
-            have to be set, and currentMeasureName and voltageMeasureName cannot be empty.
+            AttributeError: If the SMU settings are not properly defined. All attributes are required for SMU type.
+            ValueError: If the instrument returns an error after sending the command.
         """
         # Attribute saving
         self.voltageMeasureName = voltageMeasureName if voltageMeasureName != "" else self.voltageMeasureName
@@ -169,7 +189,11 @@ class SMU(Board):
                        "', " + str(self.sourceType.value) + ", " + str(self.sourceFunction.value)
         self._write("DE")
         self._write(command)
-        return
+
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
+            raise ValueError("SMU setup failed. Please check the settings and try again.")
 
     # Source setup
     def constantSourceValue(self, value: float = 0.0, compliance: float = 0.0) -> None:
@@ -180,6 +204,10 @@ class SMU(Board):
         Args:
             value (float): The value to set for the source. Defaults to self.currentValue or self.voltageValue.
             compliance (float): The compliance value to set for the source. Defaults to self.compliance.
+
+        Raises:
+            AttributeError: If the SMU settings are not properly defined (SMUmode and sourceFunction).
+            ValueError: If the instrument returns an error after sending the command.
         """
         self._write("DE")
         # No source for VM type
@@ -213,6 +241,13 @@ class SMU(Board):
         else:
             raise AttributeError("For source functions other than CONSTANT, please use sweepValues or stepValues.")
 
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
+            raise ValueError("Setting constant source value failed.")
+
+    # TODO: Sweep, Step and lists
+
     # === Private / Utils ===
 
     def _isDefinitionOk(self, type: SMUMode = SMUMode.SMU) -> bool:
@@ -245,6 +280,7 @@ class SMU(Board):
             return
 
         self._write("MP " + str(self.slot) + ", " + value.name + str(self.slot))
+
         if self._comm.hasError():
             print(self._comm.getError())
             self._comm.clearError()
@@ -287,3 +323,18 @@ class SMU(Board):
     def complianceI(self, value: float):
         minmax: tuple[float, float] = (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
         self._compliance = min(max(value, minmax[0]), minmax[1])
+
+    @property
+    def poweroffAfterTest(self) -> bool:
+        return self._poweroff_after_test
+
+    @poweroffAfterTest.setter
+    def poweroffAfterTest(self, value: bool):
+        self._write("ST " + str(self.slot) + ", " + str(int(value)))
+
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
+            raise ValueError("Poweroff after test setting failed to set.")
+
+        self._poweroff_after_test = value

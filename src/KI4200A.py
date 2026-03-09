@@ -82,6 +82,11 @@ class KI4200A:
 
         self._l_equipped = self.query("*OPT?").split(",")
 
+        if self._comms.hasError():
+            print(self.getError())
+            self._comms.clearError()
+            raise ValueError("Error during instrument scan. Please check the connection and try again.")
+
         # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns \
         # FIXME: the second one. The first one is also displayed on KCon, so definitely a KXCI issue.
         # FIXME: Can be removed if fixed in more recent versions of KXCI
@@ -100,6 +105,12 @@ class KI4200A:
         self.write("BC") # Clear buffer
         self.write(":ERROR:LAST:CLEAR") # Clear last error
         self.write("*RST") # Reset instruments
+
+        if self._comms.hasError():
+            print(self.getError())
+            self._comms.clearError()
+            raise ValueError("Error during instrument reset. Please check the connection and try again.")
+
         self.status = Status.READY
 
     def getError(self) -> str:
@@ -180,7 +191,8 @@ class KI4200A:
             return SMU.of(b)
         elif b.board_type == BoardType.CVU :
             return CVU.of(b)
-
+        elif b.board_type == BoardType.PMU_RPM :
+            return PMU_RPM.of(b)
 
         return b
 

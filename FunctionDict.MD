@@ -10,9 +10,9 @@
 - [ ] `DT` - Delay measurement during sweep (to counter the capacitive effect)
 - [ ] `FS` and `RT` - Alternative sweep settings
 - [ ] `HT` - Delay between steps before starting the sweep
-- [ ] `SC` - Constant voltage value (VS only)
+- [x] `SC` - Constant voltage value (VS only)
 - [ ] `ST` - Cut or keep power after test
-- [ ] `VC` and `IC` - Constant voltage/intensity value
+- [x] `VC` and `IC` - Constant voltage/intensity value
 - [ ] `VL` and `IL` - Sweep list values
 - [ ] `VP` and `IP` - Step settings
 - [ ] `VR` and `IR` - Sweep function
