@@ -61,6 +61,7 @@ class SMU(Board):
         self._funcStop: float = 0.0
         self._funcStep: float = 0.0
         self.sweepType: SweepType = SweepType.LINEAR
+        self._numSteps: int = 0
 
         self.status= Status.READY
 
@@ -270,8 +271,8 @@ class SMU(Board):
             ValueError: If the instrument returns an error after sending the command.
         """
         # Attribute checking
-        if self.smuType == SMUMode.VM:
-            raise AttributeError("VM type SMU cannot source current nor voltage, thus cannot perform sweeps.")
+        if self.smuType == SMUMode.VM or (self.smuType == SMUMode.VS and self.sourceType != SourceType.VOLT):
+            raise AttributeError("SMU type and source unit are not compatible.")
         elif self.sourceFunction != SourceFunction.SWEEP:
             raise AttributeError("Source function must be set to SWEEP to use this method.")
         elif self.sourceType not in [SourceType.AMPERE, SourceType.VOLT]:
@@ -289,6 +290,7 @@ class SMU(Board):
         command: str = prefix + str(self.sweepType.value) + ", " + str(self.funcStart) + ", " +\
               str(self.funcStop) + ", " + str(self.funcStep) + ", " + str(self.compliance)
 
+        self._write("DE")
         self._write(command)
 
         if self._comm.hasError():
@@ -296,7 +298,69 @@ class SMU(Board):
             self._comm.clearError()
             raise ValueError("Setting sweep function failed.")
 
-    # TODO: Step and lists
+    def setStepFunction2(self, start: float = 0.0, step: float = 0.0, numSteps: int = 0, compliance: float = 0.0) -> None:
+        """
+        Sets the source function of the SMU to a step function. The source can be either current
+        or voltage depending on the sourceType attribute.
+
+        Args:
+            start (float): The starting value of the step function. Defaults to 0.0.
+            step (float): The step value of the step function. Defaults to 0.0.
+            numSteps (int): The number of steps to perform. Defaults to 0. Max 32.
+            compliance (float): The compliance value to set for the source. Defaults to self.compliance.
+
+        Raises:
+            AttributeError: If the SMU settings are not properly defined.
+            ValueError: If the instrument returns an error after sending the command.
+        """
+        # Attribute checking
+        if self.smuType == SMUMode.VM or (self.smuType == SMUMode.VS and self.sourceType != SourceType.VOLT):
+            raise AttributeError("SMU type and source unit are not compatible.")
+        elif self.sourceFunction != SourceFunction.STEP:
+            raise AttributeError("Source function must be set to STEP to use this method.")
+        elif self.sourceType not in [SourceType.AMPERE, SourceType.VOLT]:
+            raise AttributeError("Source type must be set to AMPERE or VOLT to use this method.")
+
+        # Save attributes
+        self.funcStart = start if start != 0.0 else self.funcStart
+        self.funcStep = step if step != 0.0 else self.funcStep
+        self.compliance = compliance if compliance != 0.0 else self.compliance
+        self.numSteps = numSteps if numSteps != 0 else self.numSteps
+
+        # Generate command
+        prefix: str = "VP" if self.smuType == SMUMode.VS else "IP"
+        command: str = prefix + str(self.slot) + ", " + str(self.funcStart) + ", " +\
+              str(self.funcStep) + ", " + str(numSteps) + ", " + str(self.compliance)
+
+        self._write("DE")
+        self._write(command)
+
+        if self._comm.hasError():
+            print(self._comm.getError())
+            self._comm.clearError()
+            raise ValueError("Setting step function failed.")
+
+    def setStepFunction(self, start: float = 0.0, stop: float = 0.0, step: int = 0, compliance: float = 0.0) -> None:
+        """
+        Sets the source function of the SMU to a step function. The source can be either current
+        or voltage depending on the sourceType attribute.
+        Similar to setStepFunction, but with a defined stop value instead of number of steps.
+        Uses the setStepFunction2 method to set the function, after calculating the number of steps from the stop value.
+
+        Args:
+            start (float): The starting value of the step function. Defaults to 0.0.
+            stop (float): The stopping value of the step function. Defaults to 0.0.
+            step (int): The amount of units to step. Defaults to 0.
+            compliance (float): The compliance value to set for the source. Defaults to self.compliance.
+
+        Raises:
+            AttributeError: If the SMU settings are not properly defined.
+            ValueError: If the instrument returns an error after sending the command.
+        """
+        numStep = int(abs(stop - start) / step) if step != 0 else 0
+        self.setStepFunction2(start = start, step = step, numSteps = numStep, compliance = compliance)
+
+    # TODO: Lists
 
     # === Private / Utils ===
 
@@ -382,3 +446,20 @@ class SMU(Board):
     def funcStart(self, value: float):
         minmax: tuple[float, float] = (-210.0, 210.0) if self.sourceType == SourceType.VOLT else (-1.05, 1.05) if self.hp else (-0.105, 0.105)
         self._funcStart = min(max(value, minmax[0]), minmax[1])
+
+    @property
+    def funcStop(self) -> float:
+        return self._funcStop
+    
+    @funcStop.setter
+    def funcStop(self, value: float):
+        minmax: tuple[float, float] = (-210.0, 210.0) if self.sourceType == SourceType.VOLT else (-1.05, 1.05) if self.hp else (-0.105, 0.105)
+        self._funcStop = min(max(value, minmax[0]), minmax[1])
+
+    @property
+    def numSteps(self) -> int:
+        return self._numSteps
+    
+    @numSteps.setter
+    def numSteps(self, value: int):
+        self._numSteps = min(max(value, 0), 32)
