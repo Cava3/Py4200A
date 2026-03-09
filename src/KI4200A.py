@@ -7,6 +7,7 @@ The class uses the Communications class from the instrcomms module to handle low
 and provides user with high-level OOP to interact with the instrument in a more intuitive way.
 """
 
+from .Display import Display
 from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
@@ -23,6 +24,7 @@ class KI4200A:
         read_termination (str): The termination character(s) used when reading responses from the instrument
         status (Status): Current status of the instrument (e.g., "Initializing", "Connected", "Configuring").
         write_termination (str): The termination character(s) used when writing commands to the instrument.
+        display (Display): The display controller for managing the instrument's display.
     """
 
     def __init__(self, instrument_resource_string: str) -> None:
@@ -53,6 +55,7 @@ class KI4200A:
 
         self.status = Status.CONNECTING
         self._comms.connect()
+        self.display = Display(self._comms)
 
         self.status = Status.CONFIGURING
         self.write_termination = "\0"

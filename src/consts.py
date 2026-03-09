@@ -50,3 +50,8 @@ class SweepType(Enum):
     LOG10 = 2
     LOG25 = 3
     LOG50 = 4
+
+class DisplayMode(Enum):
+    """Enum for the 2 possible display modes"""
+    GRAPH = 1
+    LIST = 2
