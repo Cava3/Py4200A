@@ -16,15 +16,15 @@
 - [x] `VL` and `IL` - Sweep list values
 - [x] `VP` and `IP` - Step settings
 - [x] `VR` and `IR` - Sweep function
-- [ ] `SM` - # Select page "Measurement setup"
+- [x] `SM` - # Select page "Measurement setup"
 - [x] `DM` - Select between table and graph display mode
 - [ ] `IN` - Set time between measurements for time-based measurements
 - [x] `LI` - Select measurements to be shown in table display mode
 - [ ] `NR` - Amount of measurements for time-based measurements
 - [ ] `WT` - Wait time, unsure of true function
-- [ ] `XN` - Set X axis measurements to display
-- [ ] `XT` - Set X axis to display time
-- [ ] `YA` and `YB` - Set Y1 and Y2 measurements to display
+- [x] `XN` - Set X axis measurements to display
+- [x] `XT` - Set X axis to display time
+- [x] `YA` and `YB` - Set Y1 and Y2 measurements to display
 - [ ] `MD` - # Select page "Measurement control"
 - [ ] `ME` - Run test
 - [ ] `GT` - Loads data or program
