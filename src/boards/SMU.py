@@ -10,6 +10,7 @@ from .Board import Board
 from ..consts import Status, BoardType, SourceType, SourceFunction, SMUMode, SweepType
 from ..instrcomms import Communications
 from ..results import Measurement
+from ..error import KXCILimitationError
 
 class SMU(Board):
     """
@@ -37,20 +38,19 @@ class SMU(Board):
         Args:
             name (str): The name of the SMU board (e.g., "SMU1", "SMU2").
         """
+        super().__init__(name, comm)
         # General usage
         self.status = Status.INITIALIZING
-        self._name: str = name
         self.hp: bool = "HP" in name.upper()
         slot_str: str = name[-1]
-        self._comm = comm
-        self._slot: int = int(slot_str) if slot_str.isdigit() else -1
+        self._slot: int = int(slot_str) if slot_str.isdigit() else 0
         self.board_type: BoardType = BoardType.SMU
 
         # Channel definition
         self.status = Status.CONFIGURING
         self._smu_type: SMUMode = SMUMode.VM if "VM" in name.upper() else SMUMode.VS if "VS" in name.upper() else SMUMode.SMU
-        self.voltage_measurement: Measurement = Measurement(self.name+"V")
-        self.current_measurement: Measurement = Measurement(self.name+"I")
+        self.voltage_measurement: Measurement = Measurement(self.name+"V", unit=SourceType.VOLT)
+        self.current_measurement: Measurement = Measurement(self.name+"I", unit=SourceType.AMPERE)
         self.source_type: SourceType = SourceType.NONE
         self.source_function: SourceFunction = SourceFunction.NONE
         self._poweroff_after_test: bool = True
@@ -94,7 +94,7 @@ class SMU(Board):
         A function to deactivate (reset/power off) the SMU.
 
         Raises:
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         self.smu_type = SMUMode.SMU
         self._write("DE")
@@ -111,7 +111,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined. currentMeasureName cannot be empty.
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         # Store the measurement name
         self.voltage_measurement.name = voltage_measure_name if voltage_measure_name != "" else self.voltage_measurement.name
@@ -138,7 +138,7 @@ class SMU(Board):
         
         Raises:
             AttributeError: If the SMU settings are not properly defined. current_measure_name and sourceFunction are required.
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         # Attribute saving
         self.voltage_measurement.name = voltage_measure_name if voltage_measure_name != "" else self.voltage_measurement.name
@@ -168,7 +168,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined. All attributes are required for SMU type.
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         # Attribute saving
         self.voltage_measurement.name = voltage_measure_name if voltage_measure_name != "" else self.voltage_measurement.name
@@ -206,7 +206,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined (SMUmode and sourceFunction).
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         self._write("DE")
         # No source for VM type
@@ -214,9 +214,9 @@ class SMU(Board):
             raise AttributeError("VM type SMU cannot source current nor voltage")
         
         # VS has a special command
-        elif self.smu_type == SMUMode.VS and self.source_function == SourceFunction.CONSTANT:
+        if self.smu_type == SMUMode.VS and self.source_function == SourceFunction.CONSTANT:
             self.constant_value = value if value != 0.0 else self.constant_value
-            self._write("CS" + str(self.slot) + ", " + str(self.constant_value))
+            self._write("SC" + str(self.slot) + ", " + str(self.constant_value))
 
         # For SMU, the command depends on the sourceFunction and sourceType
         elif self.source_function == SourceFunction.CONSTANT and self.source_type in [SourceType.AMPERE, SourceType.VOLT]:
@@ -249,7 +249,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined.
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         # Attribute checking
         if self.smu_type == SMUMode.VM or (self.smu_type == SMUMode.VS and self.source_type != SourceType.VOLT):
@@ -276,6 +276,19 @@ class SMU(Board):
 
         self._comm.checkForError()
 
+        # Update measurements
+        if self.source_type == SourceType.VOLT:
+            self.voltage_measurement.min_value = min(self.func_start, self.func_stop)
+            self.voltage_measurement.max_value = max(self.func_start, self.func_stop)
+            self.current_measurement.min_value = -abs(self.compliance)
+            self.current_measurement.max_value = abs(self.compliance)
+        elif self.source_type == SourceType.AMPERE:
+            self.current_measurement.min_value = min(self.func_start, self.func_stop)
+            self.current_measurement.max_value = max(self.func_start, self.func_stop)
+            self.voltage_measurement.min_value = -abs(self.compliance)
+            self.voltage_measurement.max_value = abs(self.compliance)
+
+
     def setStepFunction2(self, start: float = 0.0, step: float = 0.0, num_steps: int = 0, compliance: float = 0.0) -> None:
         """
         Sets the source function of the SMU to a step function. The source can be either current
@@ -289,7 +302,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined.
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         # Attribute checking
         if self.smu_type == SMUMode.VM or (self.smu_type == SMUMode.VS and self.source_type != SourceType.VOLT):
@@ -315,7 +328,19 @@ class SMU(Board):
 
         self._comm.checkForError()
 
-    def setStepFunction(self, start: float = 0.0, stop: float = 0.0, step: int = 0, compliance: float = 0.0) -> None:
+        # Update measurements
+        if self.source_type == SourceType.VOLT:
+            self.voltage_measurement.min_value = min(self.func_start, self.func_start + self.func_step * self.num_steps)
+            self.voltage_measurement.max_value = max(self.func_start, self.func_start + self.func_step * self.num_steps)
+            self.current_measurement.min_value = -abs(self.compliance)
+            self.current_measurement.max_value = abs(self.compliance)
+        elif self.source_type == SourceType.AMPERE:
+            self.current_measurement.min_value = min(self.func_start, self.func_start + self.func_step * self.num_steps)
+            self.current_measurement.max_value = max(self.func_start, self.func_start + self.func_step * self.num_steps)
+            self.voltage_measurement.min_value = -abs(self.compliance)
+            self.voltage_measurement.max_value = abs(self.compliance)
+
+    def setStepFunction(self, start: float = 0.0, stop: float = 0.0, step: float = 0.0, compliance: float = 0.0) -> None:
         """
         Sets the source function of the SMU to a step function. The source can be either current
         or voltage depending on the sourceType attribute.
@@ -325,12 +350,12 @@ class SMU(Board):
         Args:
             start (float): The starting value of the step function. Defaults to 0.0.
             stop (float): The stopping value of the step function. Defaults to 0.0.
-            step (int): The amount of units to step. Defaults to 0.
+            step (float): The amount of units to step. Defaults to 0.0.
             compliance (float): The compliance value to set for the source. Defaults to self.compliance.
 
         Raises:
             AttributeError: If the SMU settings are not properly defined.
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         num_step = int(abs(stop - start) / step) if step != 0 else 0
         self.setStepFunction2(start = start, step = step, num_steps = num_step, compliance = compliance)
@@ -346,8 +371,8 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined.
-            ValueError: If the list is empty or too long.
-            KXCIError: If the instrument returns an error after sending the command.
+            KXCILimitationError: If the list is empty or too long.
+            KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         # Attribute checking
         if self.smu_type == SMUMode.VM or (self.smu_type == SMUMode.VS and self.source_type != SourceType.VOLT):
@@ -357,7 +382,7 @@ class SMU(Board):
         elif self.source_type not in [SourceType.AMPERE, SourceType.VOLT]:
             raise AttributeError("Source type must be set to AMPERE or VOLT to use this method.")
         elif len(values) == 0 or len(values) > 4096:
-            raise ValueError("Values list must contain between 1 and 4096 values.")
+            raise KXCILimitationError("Values list must contain between 1 and 4096 values.")
 
         # Save attributes
         self.compliance = compliance if compliance != 0.0 else self.compliance
@@ -390,7 +415,6 @@ class SMU(Board):
             (self.source_function != SourceFunction.NONE or self.smu_type == SMUMode.VM) and\
             (self.current_measurement.name != "" or self.smu_type != SMUMode.SMU) and\
             (self.source_type != SourceType.NONE or self.smu_type != SMUMode.SMU)
-
 
     # === Getters/Setters ===
 

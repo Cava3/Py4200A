@@ -6,6 +6,7 @@ This module defines the PMU_RPM class, which inherits from the Board class and r
 type of board (an PMU_RPM) equipped in the KI4200A. The PMU_RPM class provides methods and attributes\
 specific to PMU_RPMs, such as [].
 """ # TODO:                   ^
+from ..instrcomms import Communications
 from .Board import Board
 from ..consts import Status, BoardType
 
@@ -20,18 +21,18 @@ class PMU_RPM(Board):
 
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, comm: Communications) -> None:
         """
         Initialize an PMU_RPM instance with the given name and set its type to BoardType.PMU_RPM.
 
         Args:
             name (str): The name of the PMU_RPM board (e.g., "PMU1RPM1-1", "PMU1RPM1-2").
         """
+        super().__init__(name, comm)
         self.status = Status.INITIALIZING
-        self._name: str = name
         self.board_type: BoardType = BoardType.PMU_RPM
         self.status= Status.READY
-        s_slot = name[-1] + name[-3]
+        s_slot = name[-3] + name[-1]
         self._slot = int(s_slot) if s_slot.isnumeric() else 0
 
     # === Factory ===
@@ -47,7 +48,7 @@ class PMU_RPM(Board):
         Returns:
             PMU_RPM: An instance of the PMU_RPM class.
         """
-        cvu = PMU_RPM(board.name)
+        cvu = PMU_RPM(board.name, board._comm)
         cvu.status = board.status
         return cvu
 

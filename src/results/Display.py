@@ -39,7 +39,7 @@ class Display:
         self._comm.write("LI " + ", ".join(l_measurement_names))
         self._comm.checkForError()
 
-    def graphMeasurements(self, x: Measurement = Measurement("T"), y1: Measurement | None = None, y2: Measurement | None = None):
+    def setGraphMeasurements(self, x: Measurement = Measurement("T"), y1: Measurement | None = None, y2: Measurement | None = None):
         """
         Configure the graph display to show the specified measurements on the X, Y1, and Y2 axes.
 

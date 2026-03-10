@@ -4,7 +4,7 @@
 """
 
 import pyvisa as visa
-from .error import KXCIError
+from .error import KXCIConsoleError
 
 class Communications:
     """
@@ -174,7 +174,7 @@ class Communications:
         if self.hasError():
             error_message = self.getError()
             self.clearError()
-            raise KXCIError(message=error_message)
+            raise KXCIConsoleError(message=error_message)
 
     # === Getters and setters ===
 

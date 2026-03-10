@@ -6,7 +6,6 @@ This module defines the KI4200A class, which provides methods to control the Kei
 The class uses the Communications class from the instrcomms module to handle low-level communication, \
 and provides user with high-level OOP to interact with the instrument in a more intuitive way.
 """
-# TODO: keep track of all measurements
 from .results import Display, Measurement
 from .instrcomms import Communications
 from .boards.Board import Board
@@ -43,6 +42,7 @@ class KI4200A:
         self.id: dict[str, str]
         self.status: Status             # KI4200A's current task or state
         self.l_equipment: list[Board]   # List of board objects equipped in the instrument
+        self.l_smus: list[SMU]          # List of SMU boards equipped in the instrument in slot order
         self.display: Display           # Display controller for managing the instrument's display
         self.all_measurements: list[Measurement] # List of all measurements configured on the instrument
         
@@ -74,6 +74,8 @@ class KI4200A:
         }
         self.scan()
         self.all_measurements = [measurement for board in self.l_equipment for measurement in board.measurements]
+        self.l_smus = [board for board in self.l_equipment if board.board_type == BoardType.SMU and isinstance(board, SMU)]
+        self.l_smus.sort(key=lambda smu: smu.slot)
 
         self.status = Status.READY_NOT_RESET
 
@@ -159,6 +161,20 @@ class KI4200A:
         Reconnects to the instrument when disconnected.
         """
         self.__init__(self._instrument_resource_string)
+
+    def runTest(self) -> None:
+        """
+        Starts the test sequence on the instrument.
+        """
+        self.write("MD")
+        self.write("ME1")
+
+    def abortTest(self) -> None:
+        """
+        Aborts the test sequence on the instrument.
+        """
+        self.write("MD")
+        self.write("ME4")
 
     def waitForDataReady(self, timout: int = 25_000) -> None:
         """
