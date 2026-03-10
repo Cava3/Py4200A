@@ -25,8 +25,8 @@
 - [x] `XN` - Set X axis measurements to display
 - [x] `XT` - Set X axis to display time
 - [x] `YA` and `YB` - Set Y1 and Y2 measurements to display
-- [ ] `MD` - # Select page "Measurement control"
-- [ ] `ME` - Run test
+- [x] `MD` - # Select page "Measurement control"
+- [x] `ME` - Run test
 - [ ] `GT` - Loads data or program
 - [ ] `SV` - Save data or program
 - [ ] No page required
@@ -38,11 +38,11 @@
 - [ ] `TI` and `TV` - Trigger a measurement of wanted value
 - [ ] `AC` - Calibrate a channel
 - [x] `BC` - Clear buffer
-- [ ] `DO` - Get readings for a measurement
+- [ ] `DO` - Get time readings ? Maybe ? Idk ?
 - [ ] `EC` - Exit if compliance reached (saturation)
 - [ ] `EM` - Switch to 4145 emulation mode
 - [ ] `IT` - SMU integration time (noisy, medium, quiet)
-- [ ] `RD` - Get real time readings
+- [x] `RD` - Get readings, available in real time
 - [ ] `RG` - Set current rangewhen measuring
 - [ ] `RI` and `RV` - Set real-time intensity/voltage output
 - [ ] `RS` - Float precision (0-7)

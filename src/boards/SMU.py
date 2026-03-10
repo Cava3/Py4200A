@@ -254,10 +254,14 @@ class SMU(Board):
         # Attribute checking
         if self.smu_type == SMUMode.VM or (self.smu_type == SMUMode.VS and self.source_type != SourceType.VOLT):
             raise AttributeError("SMU type and source unit are not compatible.")
-        elif self.source_function != SourceFunction.SWEEP:
+        if self.source_function != SourceFunction.SWEEP:
             raise AttributeError("Source function must be set to SWEEP to use this method.")
-        elif self.source_type not in [SourceType.AMPERE, SourceType.VOLT]:
+        if self.source_type not in [SourceType.AMPERE, SourceType.VOLT]:
             raise AttributeError("Source type must be set to AMPERE or VOLT to use this method.")
+        if step == 0.0 or start == stop:
+            raise AttributeError("Step value cannot be 0 and start and stop values cannot be the same for a sweep function.")
+        if int(abs(stop - start) / step) > 1024:
+            raise KXCILimitationError("The number of steps in a sweep cannot exceed 1024. Please adjust the step value or the start/stop values.")
 
         # Save attributes
         self.func_start = start if start != 0.0 else self.func_start
@@ -268,8 +272,9 @@ class SMU(Board):
 
         # Generate command
         prefix: str = "VR" if self.smu_type == SMUMode.VS else "IR"
-        command: str = prefix + str(self.sweep_type.value) + ", " + str(self.func_start) + ", " +\
-              str(self.func_stop) + ", " + str(self.func_step) + ", " + str(self.compliance)
+        command: str = prefix + str(self.sweep_type.value) + ", " + str(self.func_start) + ", " + str(self.func_stop)
+        if self.sweep_type == SweepType.LINEAR:
+            command += ", " + str(self.func_step) + ", " + str(self.compliance)
 
         self._write("DE")
         self._write(command)

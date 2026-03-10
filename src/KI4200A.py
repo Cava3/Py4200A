@@ -162,12 +162,15 @@ class KI4200A:
         """
         self.__init__(self._instrument_resource_string)
 
-    def runTest(self) -> None:
+    def runTest(self, clearBuffer: bool = True) -> None:
         """
         Starts the test sequence on the instrument.
         """
         self.write("MD")
-        self.write("ME1")
+        if clearBuffer:
+            self.write("ME1")
+        else:
+            self.write("ME3")
 
     def abortTest(self) -> None:
         """
