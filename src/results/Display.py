@@ -25,21 +25,24 @@ class Display:
             comm (Communications): The communication object used to send commands.
         """
         self._comm = comm
-        self._display_mode: DisplayMode = DisplayMode.GRAPH
+        self._display_mode: DisplayMode = DisplayMode.NONE
 
-    def setListMeasurements(self, l_measurements: list[str]):
+    def displayList(self, l_measurements: list[str]):
         """
         Select the list of measurements to be displayed on KXCI in LIST mode.
 
         Args:
             l_measurements (list[str]): List of measurement names to display.
         """
+        if self.display_mode != DisplayMode.LIST:
+            self.display_mode = DisplayMode.LIST
+
         l_measurement_names = [f"'{measure_name}'" for measure_name in l_measurements]
         self._comm.write("SM")
         self._comm.write("LI " + ", ".join(l_measurement_names))
         self._comm.checkForError()
 
-    def setGraphMeasurements(self, x: Measurement = Measurement("T"), y1: Measurement | None = None, y2: Measurement | None = None):
+    def displayGraph(self, x: Measurement, y1: Measurement, y2: Measurement | None = None):
         """
         Configure the graph display to show the specified measurements on the X, Y1, and Y2 axes.
 
@@ -49,15 +52,16 @@ class Display:
             y2 (Measurement): The measurement to display on the Y2-axis.
         """
         self._comm.write("SM")
-        self.display_mode = DisplayMode.GRAPH
+        
+        if self.display_mode != DisplayMode.GRAPH:
+            self.display_mode = DisplayMode.GRAPH
 
         if x.name == "T":
             self._comm.write(f"XT {x.min_value}, {x.max_value}")
         else:
             self._comm.write(x.getGraphCommand(GraphPosition.X))
 
-        if y1 is not None:
-            self._comm.write(y1.getGraphCommand(GraphPosition.Y1))
+        self._comm.write(y1.getGraphCommand(GraphPosition.Y1))
 
         if y2 is not None:
             self._comm.write(y2.getGraphCommand(GraphPosition.Y2))

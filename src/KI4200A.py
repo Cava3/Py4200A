@@ -10,7 +10,7 @@ from .results import Display, Measurement
 from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
-from .consts import Status, BoardType
+from .consts import Status, BoardType, RPMMode
 from pyvisa.resources.gpib import GPIBInstrument
 
 class KI4200A:
@@ -162,10 +162,17 @@ class KI4200A:
         """
         self.__init__(self._instrument_resource_string)
 
-    def runTest(self, clearBuffer: bool = True) -> None:
+    def runSmuTest(self, clearBuffer: bool = True) -> None:
         """
         Starts the test sequence on the instrument.
         """
+        # Switch RPMs to SMU
+
+        rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
+        for rpm in rpms:
+            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.SMU.value}")
+
+        # Run the test
         self.write("MD")
         if clearBuffer:
             self.write("ME1")
@@ -179,15 +186,16 @@ class KI4200A:
         self.write("MD")
         self.write("ME4")
 
-    def waitForDataReady(self, timout: int = 25_000) -> None:
+    def waitForDataReady(self, timeout: int = 25_000) -> None:
         """
         Wait until the instrument has completed its current operation and is ready for the next command.
         This can be used after issuing a command that takes time to execute, to ensure that the instrument is\
         ready before sending the next command.
         """
         if isinstance(self._comms.instrument_object, GPIBInstrument):
+            # TODO: Not Implemented Error
             # For GPIB, use the event manager
-            self._comms.instrument_object.wait_for_srq(timeout=timout)
+            self._comms.instrument_object.wait_for_srq(timeout=timeout)
         else:
             # For TCPIP, repeated requests until
             while int(self.query("SP")) not in [0, 1]:

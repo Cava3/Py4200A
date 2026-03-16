@@ -30,6 +30,8 @@ class SMU(Board):
         sourceFunction (consts.SourceFunction): The function to apply to the source (SWEEP, STEP, CONSTANT)
     """
 
+    stepper_index: int = 0
+
     # === Creation ===
     def __init__(self, name: str, comm: Communications) -> None:
         """
@@ -49,12 +51,13 @@ class SMU(Board):
         # Channel definition
         self.status = Status.CONFIGURING
         self._smu_type: SMUMode = SMUMode.VM if "VM" in name.upper() else SMUMode.VS if "VS" in name.upper() else SMUMode.SMU
-        self.voltage_measurement: Measurement = Measurement(self.name+"V", unit=SourceType.VOLT)
-        self.current_measurement: Measurement = Measurement(self.name+"I", unit=SourceType.AMPERE)
+        self.voltage_measurement: Measurement = Measurement(comm, self.name+"V", unit=SourceType.VOLT)
+        self.current_measurement: Measurement = Measurement(comm, self.name+"I", unit=SourceType.AMPERE)
         self.source_type: SourceType = SourceType.NONE
         self.source_function: SourceFunction = SourceFunction.NONE
         self._poweroff_after_test: bool = True
         self.measurements: list[Measurement] = [self.voltage_measurement, self.current_measurement]
+        self._stepper_index: int = 0
 
         #Source setup
         self._compliance: float = 0.0
@@ -117,7 +120,7 @@ class SMU(Board):
         self.voltage_measurement.name = voltage_measure_name if voltage_measure_name != "" else self.voltage_measurement.name
 
         # Attribute checking
-        if not self._isDefinitionOk(SMUMode.SMU):
+        if not self._isDefinitionOk(SMUMode.VM):
             raise AttributeError("VM definition is incomplete. Please set all required attributes :\
                                   voltageMeasureName")
 
@@ -140,21 +143,27 @@ class SMU(Board):
             AttributeError: If the SMU settings are not properly defined. current_measure_name and sourceFunction are required.
             KXCIConsoleError: If the instrument returns an error after sending the command.
         """
+
         # Attribute saving
         self.voltage_measurement.name = voltage_measure_name if voltage_measure_name != "" else self.voltage_measurement.name
         self.source_function = source_function if source_function != SourceFunction.NONE else self.source_function
 
         # Attribute checking
-        if not self._isDefinitionOk(SMUMode.SMU):
+        if not self._isDefinitionOk(SMUMode.VS):
             raise AttributeError("VS definition is incomplete. Please set all required attributes :\
                                   voltage_measure_name, and source_function.")
 
         # Generate and send the commands
         self.smu_type = SMUMode.VS
+        self.source_type = SourceType.VOLT
         self._write("DE")
         self._write("VS" + str(self.slot) + ", '" + self.voltage_measurement.name + "', " + str(self.source_function.value))
 
         self._comm.checkForError()
+
+        # Stepper index
+        SMU.stepper_index += 1
+        self._stepper_index = SMU.stepper_index
     
     def setupSMU(self, voltage_measure_name: str = "", current_measure_name: str = "", source_type: SourceType = SourceType.NONE, source_function: SourceFunction = SourceFunction.NONE) -> None:
         """
@@ -208,7 +217,7 @@ class SMU(Board):
             AttributeError: If the SMU settings are not properly defined (SMUmode and sourceFunction).
             KXCIConsoleError: If the instrument returns an error after sending the command.
         """
-        self._write("DE")
+        self._write("SS")
         # No source for VM type
         if self.smu_type == SMUMode.VM:
             raise AttributeError("VM type SMU cannot source current nor voltage")
@@ -271,12 +280,12 @@ class SMU(Board):
         self.sweep_type = sweepType
 
         # Generate command
-        prefix: str = "VR" if self.smu_type == SMUMode.VS else "IR"
+        prefix: str = "VR" if self.source_type == SourceType.VOLT else "IR"
         command: str = prefix + str(self.sweep_type.value) + ", " + str(self.func_start) + ", " + str(self.func_stop)
         if self.sweep_type == SweepType.LINEAR:
             command += ", " + str(self.func_step) + ", " + str(self.compliance)
 
-        self._write("DE")
+        self._write("SS")
         self._write(command)
 
         self._comm.checkForError()
@@ -324,11 +333,10 @@ class SMU(Board):
         self.num_steps = num_steps if num_steps != 0 else self.num_steps
 
         # Generate command
-        prefix: str = "VP" if self.smu_type == SMUMode.VS else "IP"
-        command: str = prefix + str(self.slot) + ", " + str(self.func_start) + ", " +\
-              str(self.func_step) + ", " + str(self.num_steps) + ", " + str(self.compliance)
+        prefix: str = "VP" if self.source_type == SourceType.VOLT else "IP"
+        command: str = f"{prefix} {self.func_start}, {self.func_step}, {self.num_steps}, {self.compliance}, {self.stepper_index}"
 
-        self._write("DE")
+        self._write("SS")
         self._write(command)
 
         self._comm.checkForError()
@@ -397,14 +405,14 @@ class SMU(Board):
         list_str: str = ", ".join([str(x) for x in values])
         command: str = prefix + str(self.slot) + ", " + str(int(master)) + ", " + str(self.compliance) + ", " + list_str
 
-        self._write("DE")
+        self._write("SS")
         self._write(command)
 
         self._comm.checkForError()
 
     # === Private / Utils ===
 
-    def _isDefinitionOk(self, type: SMUMode = SMUMode.SMU) -> bool:
+    def _isDefinitionOk(self, type_of_smu: SMUMode) -> bool:
         """
         Allows to check if the attribute is okay for given SMU type.
 
@@ -417,9 +425,9 @@ class SMU(Board):
         # sourceType is mandatory for SMU
         return \
             self.voltage_measurement.name != "" and\
-            (self.source_function != SourceFunction.NONE or self.smu_type == SMUMode.VM) and\
-            (self.current_measurement.name != "" or self.smu_type != SMUMode.SMU) and\
-            (self.source_type != SourceType.NONE or self.smu_type != SMUMode.SMU)
+            (self.source_function != SourceFunction.NONE or type_of_smu == SMUMode.VM) and\
+            (self.current_measurement.name != "" or type_of_smu != SMUMode.SMU) and\
+            (self.source_type != SourceType.NONE or type_of_smu != SMUMode.SMU)
 
     # === Getters/Setters ===
 
@@ -463,7 +471,7 @@ class SMU(Board):
 
     @power_off_after_test.setter
     def power_off_after_test(self, value: bool):
-        self._write("DE")
+        self._write("SS")
         self._write("ST " + str(self.slot) + ", " + str(int(value)))
         self._comm.checkForError()
         self._poweroff_after_test = value

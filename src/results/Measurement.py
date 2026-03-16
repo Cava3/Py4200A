@@ -79,7 +79,7 @@ class Measurement:
             list[float]: The list of measurement values retrieved from the instrument.
         """
         l_readings: list[float] = []
-        index: int = 0
+        index: int = 1
         while self.isResultReady(index):
             l_readings.append(self.getResultAt(index))
             index += 1
