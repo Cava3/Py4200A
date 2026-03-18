@@ -220,8 +220,10 @@ class KI4200A:
 
         else:
             # For TCPIP, repeated requests until
-            while int(self.query("SP")) not in [0, 1]:
-                pass
+            while True:
+                response: str = self.query("SP")
+                if response.isnumeric() and int(response) in [0, 1]:
+                    break
 
     # === Private ===
 

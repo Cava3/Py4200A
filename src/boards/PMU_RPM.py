@@ -48,8 +48,8 @@ class PMU_RPM(Board):
         Returns:
             PMU_RPM: An instance of the PMU_RPM class.
         """
-        cvu = PMU_RPM(board.name, board._comm)
-        cvu.status = board.status
-        return cvu
+        rpm = PMU_RPM(board.name, board._comm)
+        rpm.status = board.status
+        return rpm
 
     # === Getters and setters ===

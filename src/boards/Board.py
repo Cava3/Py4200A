@@ -26,10 +26,10 @@ class Board:
 
     def __init__(self, name: str, comm: Communications) -> None:
         """
-        Initialize a Board instance with the given name and slot number.
+        Initialize a Board instance.
         Args:
             name (str): The name of the board (e.g., "SMU1", "PMU2").
-            slot (int): The slot number where the board is installed in the instrument.
+            comm (Communications): The communication object.
         """
         self.status: Status = Status.INITIALIZING
         self._name: str = name
@@ -64,7 +64,10 @@ class Board:
 
         Send a command to the instrument but doesn't read an answer.  
         Only for GPIB, as TCPIP always return a value, or "ACK".  
-        For TCPIP, redirects to `query`
+        For TCPIP, redirects to `query`.
+        
+        Args:
+            command (str): The command to send.
         """
         if self._comm.con_type == 1:
             self._comm.write(command)
@@ -86,9 +89,15 @@ class Board:
         return self._comm.query(command)
 
     def __str__(self) -> str:
+        """
+        Returns the string representation of the board (its name).
+        """
         return self.name
     
     def __eq__(self, other: object) -> bool:
+        """
+        Check equality based on the board's name.
+        """
         return isinstance(other, Board) and self.name == other.name
     
     # === Getters and setters ===

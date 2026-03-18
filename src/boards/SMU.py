@@ -92,7 +92,7 @@ class SMU(Board):
 
     # === Public ===
     # Channel definition
-    def deactivate(self):
+    def deactivate(self) -> None:
         """
         A function to deactivate (reset/power off) the SMU.
 
@@ -210,7 +210,7 @@ class SMU(Board):
         or voltage depending on the sourceType attribute.
 
         Args:
-            value (float): The value to set for the source. Defaults to self.constant_value or self._constant_value.
+            value (float): The value to set for the source. Defaults to 0.0.
             compliance (float): The compliance value to set for the source. Defaults to self.compliance.
 
         Raises:

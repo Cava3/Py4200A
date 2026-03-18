@@ -100,7 +100,7 @@ This example code allows to test the gate on a standard MOSFET. After execution,
 (as defined in the program). Each point shows how much current goes through the source depending on the
 source voltage (sweep function).  
 
-> [!WARNiNG]
+> [!WARNING]
 > This script must be run as `sudo` to be able to access the GPIB0 interface
 
 You can display (plot) the graph on your computer by adding these few lines :

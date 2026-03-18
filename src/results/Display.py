@@ -27,7 +27,7 @@ class Display:
         self._comm = comm
         self._display_mode: DisplayMode = DisplayMode.NONE
 
-    def displayList(self, l_measurements: list[str]):
+    def displayList(self, l_measurements: list[str]) -> None:
         """
         Select the list of measurements to be displayed on KXCI in LIST mode.
 
@@ -42,7 +42,7 @@ class Display:
         self._comm.write("LI " + ", ".join(l_measurement_names))
         self._comm.checkForError()
 
-    def displayGraph(self, x: Measurement, y1: Measurement, y2: Measurement | None = None):
+    def displayGraph(self, x: Measurement, y1: Measurement, y2: Measurement | None = None) -> None:
         """
         Configure the graph display to show the specified measurements on the X, Y1, and Y2 axes.
 
