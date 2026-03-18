@@ -7,7 +7,7 @@
 - [x] `CH` - Full SMU definition
 - [x] `VM` - Define as voltmeter only
 - [x] `VS` - Define as volt source
-- [ ] `SS` - # Select page "Source Setup"
+- [x] `SS` - # Select page "Source Setup"
 - [ ] `DT` - Delay measurement during sweep (to counter the capacitive effect)
 - [ ] `FS` and `RT` - Alternative sweep settings
 - [ ] `HT` - Delay between steps before starting the sweep

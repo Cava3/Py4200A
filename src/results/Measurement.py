@@ -55,7 +55,7 @@ class Measurement:
         try:
             return float(str_result)
         except ValueError:
-            raise ValueError(f'Invalid string for float conversion : {str_result}')
+            raise ValueError(f'KXCI returned an invalid result for string to float conversion : {str_result}')
 
 
     def isResultReady(self, index: int) -> bool:

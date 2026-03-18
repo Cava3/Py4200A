@@ -12,6 +12,7 @@ from .boards.Board import Board
 from .boards import *
 from .consts import Status, BoardType, RPMMode
 from pyvisa.resources.gpib import GPIBInstrument
+import time as t
 
 class KI4200A:
     """
@@ -92,9 +93,10 @@ class KI4200A:
         self._l_equipped = self.query("*OPT?").split(",")
         self._comms.checkForError()
 
-        # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns \
+        # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns
         # FIXME: the second one. The first one is also displayed on KCon, so definitely a KXCI issue.
         # FIXME: Can be removed if fixed in more recent versions of KXCI
+        # FIXME: Update : RMP is configurable with commands, so it proves thats just a KXCI response problem.
         if "PMU1RPM1-2" in self._l_equipped and "PMU1RPM1-1" not in self._l_equipped:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
@@ -110,6 +112,9 @@ class KI4200A:
         self.write("BC") # Clear buffer
         self.write(":ERROR:LAST:CLEAR") # Clear last error
         self.write("*RST") # Reset instruments
+
+        for smu in self.l_smus:
+            smu.deactivate()
 
         self._comms.checkForError()
 
@@ -162,9 +167,12 @@ class KI4200A:
         """
         self.__init__(self._instrument_resource_string)
 
-    def runSmuTest(self, clearBuffer: bool = True) -> None:
+    def runSmuTest(self, clear_buffer: bool = True) -> None:
         """
         Starts the test sequence on the instrument.
+
+        Args: 
+             clearBuffer (bool) : wether to clear the result buffer. Defaults to True
         """
         # Switch RPMs to SMU
 
@@ -174,10 +182,14 @@ class KI4200A:
 
         # Run the test
         self.write("MD")
-        if clearBuffer:
+        if clear_buffer:
             self.write("ME1")
         else:
             self.write("ME3")
+
+        # Reset RPMs after test
+        for rpm in rpms:
+            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.PMU.value}")
 
     def abortTest(self) -> None:
         """
@@ -186,16 +198,26 @@ class KI4200A:
         self.write("MD")
         self.write("ME4")
 
-    def waitForDataReady(self, timeout: int = 25_000) -> None:
+    def waitForDataReady(self, timeout: int = 3) -> None:
         """
         Wait until the instrument has completed its current operation and is ready for the next command.
         This can be used after issuing a command that takes time to execute, to ensure that the instrument is\
         ready before sending the next command.
+
+        Args:
+            timeout (int) : Timeout in seconds for my workaround to the pyvvisa-py issue. Defaults to 3 seconds.
         """
         if isinstance(self._comms.instrument_object, GPIBInstrument):
-            # TODO: Not Implemented Error
-            # For GPIB, use the event manager
-            self._comms.instrument_object.wait_for_srq(timeout=timeout)
+            # # For GPIB, use the event manager
+            # self._comms.instrument_object.wait_for_srq(timeout=timeout) # Not implemented in PyVisa-py !
+
+            # FIXME: PyVisa-py doesn't implement the wait_for_srq event.
+            # My workaround will be to check if a command that is not available while running times out or works.
+            t_start = 0
+            while t.time() > t_start + timeout:
+                t_start = t.time()
+                self.query("*OPT?")
+
         else:
             # For TCPIP, repeated requests until
             while int(self.query("SP")) not in [0, 1]:

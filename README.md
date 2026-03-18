@@ -56,33 +56,60 @@ I have yet to confirm if the real requirement would just be to have a DHCP serve
 ### Code
 In Python, import the lib to use it. Here is an example of code to test if everything is working.
 ```py
-from Py4200A import *
+import py4200A
+from py4200A import *
 
-# INST_RESOURCE_STR = "TCPIP0::<ip>::<port>::SOCKET"
-# INST_RESOURCE_STR = "GPIB0::<gpib_adress>::INSTR"
+#> Connecting to the Keithley
+# INST_RESOURCE_STR = "TCPIP0::192.0.2.0::1225::SOCKET"
 INST_RESOURCE_STR = "GPIB0::17::INSTR"
 
 ki4200: KI4200A = KI4200A(INST_RESOURCE_STR)
-print(ki4200.id)
-print(" ".join(str(eq) for eq in ki4200.l_equipment))
+ki4200.reset()
 
+#> Getting the SMUs
+source = ki4200.l_smus[2]
+gate = ki4200.l_smus[1]
+unused = ki4200.l_smus[0]
+unused.deactivate()
+
+#> Configure the SMUs
+gate.setupSMU("VGT", "IGT", py4200A.consts.SourceType.VOLT, py4200A.consts.SourceFunction.STEP)
+gate.setStepFunction(start=0, stop=5, step=1, compliance=0.1)
+
+source.setupSMU("VSRC", "ISRC", py4200A.consts.SourceType.VOLT, py4200A.consts.SourceFunction.SWEEP)
+source.setSweepFunction(py4200A.consts.SweepType.LINEAR, start=0, stop=15, step=0.1, compliance=0.05)
+
+#> Configure the display
+ki4200.display.displayGraph(x=source.voltage_measurement, y1=source.current_measurement) # x= time, y1 = gateV, y2 = srcV
+
+#> Run and wait for test
+print("Starting test.")
+ki4200.runSmuTest()
+ki4200.waitForDataReady()
+print("Done.")
+
+#> Get the results
+src_v = source.voltage_measurement.getAllResults()
+src_i = source.current_measurement.getAllResults()
+
+#> Disconnect is not required but good practice
 ki4200.disconnect()
 ``` 
-Explanation line by line :  
-1. Import the `Py4200A` library
-2. _
-3. Example of TCPIP connection string. \<ip> : the Keithley's ip, \<port> the TCPIP port
-4. Example of GPIB connection string. \<gpib_adress> : the GPIB adress you configured in KCon. Should be an natural integer.
-5. In my case, I configured the GPIB port to 17.
-6. _
-7. Instanciate a new KI4200A object using the ressource string
-8. Display the `id` dict, that contains the Brand name, Model, Serial number and Software Version
-9.  Display the list of detected cards.
-10. _
-11. Disconnect the device. Not required as it auto-closes upon destruction, but good practice.
+This example code allows to test the gate on a standard MOSFET. After execution, the Keithley should display
+6 curves one above another. Each curve represents a different gate voltage (the step function) from 0 to 6
+(as defined in the program). Each point shows how much current goes through the source depending on the
+source voltage (sweep function).  
 
 > [!WARNiNG]
 > This script must be run as `sudo` to be able to access the GPIB0 interface
+
+You can display (plot) the graph on your computer by adding these few lines :
+```py
+#> Plotting
+import matplotlib.pyplot as plt
+plt.plot(src_v, src_i)
+plt.show()
+```
 
 ## Supported features
 This list is non-exhaustive and lacks the different board types.
@@ -92,22 +119,25 @@ This list is non-exhaustive and lacks the different board types.
 - [x] Device informations
 - [x] Boards list
 - [x] Direct instruction query
-- [ ] Run test
+- [x] Run test
 
 **SMU**
-- [ ] Choose between voltage and amps
-- [ ] Constant source
-- [ ] Sweep source
-- [ ] Step source
+- [x] Choose between voltage and amps
+- [x] Constant source
+- [x] Sweep source
+- [x] Step source
 - [x] Voltmeter
 
 **CVU**
 - [ ] WIP
 
+**PMU_RPM**
+- [ ] WIP
+
 **Utils**
 - [ ] Export results
 - [ ] Save and load configs
-- [ ] Display graph
+- [x] Display graph
 - [ ] Import results and export multi-results
 
 
@@ -116,10 +146,10 @@ This list is non-exhaustive and lacks the different board types.
 - [x] Perform basic instruction to get Model and SN from KXCI
 - [x] Listing of all the boards available
 - [x] Correctly type the boards
-- [ ] Send basic setting instructions to SMUs
-- [ ] Allow test execution
-- [ ] Basic result retrieval
-- [ ] Analysis and plotting
+- [x] Send basic setting instructions to SMUs
+- [x] Allow test execution
+- [x] Basic result retrieval
+- [x] Analysis and plotting
 - [ ] Util to export results to CSV, txt, raw binary
 - [ ] Extended instruction set
 - [ ] Util to save/export and load/import settings profiles
