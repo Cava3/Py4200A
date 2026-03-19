@@ -8,9 +8,9 @@
 - [x] `VM` - Define as voltmeter only
 - [x] `VS` - Define as volt source
 - [x] `SS` - # Select page "Source Setup"
-- [ ] `DT` - Delay measurement during sweep (to counter the capacitive effect)
+- [x] `DT` - Delay measurement during sweep (to counter the capacitive effect)
 - [ ] `FS` and `RT` - Alternative sweep settings
-- [ ] `HT` - Delay between steps before starting the sweep
+- [x] `HT` - Delay between steps before starting the sweep
 - [x] `SC` - Constant voltage value (VS only)
 - [x] `ST` - Cut or keep power after test
 - [x] `VC` and `IC` - Constant voltage/intensity value

@@ -69,8 +69,10 @@ class SMU(Board):
         self._funcStep: float = 0.0
         self.sweep_type: SweepType = SweepType.LINEAR
         self._num_steps: int = 0
+        self._delay_before_measure_during_sweep: float = 0.0
+        self._hold_before_sweep_during_step: float = 0.0
 
-        self.status= Status.READY
+        self.status = Status.READY
 
     # === Factory ===
 
@@ -501,3 +503,23 @@ class SMU(Board):
     @num_steps.setter
     def num_steps(self, value: int):
         self._num_steps = min(max(value, 0), 32)
+
+    @property
+    def delay_before_measure_during_sweep(self) -> float:
+        return self._delay_before_measure_during_sweep
+
+    @delay_before_measure_during_sweep.setter
+    def delay_before_measure_during_sweep(self, value: float):
+        self._delay_before_measure_during_sweep = min(max(value, 0.0), 6.553)
+        self._write(f"DT {self._delay_before_measure_during_sweep}")
+        self._comm.checkForError()
+
+    @property
+    def hold_before_sweep_during_step(self) -> float:
+        return self._hold_before_sweep_during_step
+
+    @hold_before_sweep_during_step.setter
+    def hold_before_sweep_during_step(self, value: float):
+        self._hold_before_sweep_during_step = min(max(value, 0.0), 655.3)
+        self._write(f"HT {self._hold_before_sweep_during_step}")
+        self._comm.checkForError()
