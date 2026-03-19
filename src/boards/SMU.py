@@ -71,6 +71,7 @@ class SMU(Board):
         self._num_steps: int = 0
         self._delay_before_measure_during_sweep: float = 0.0
         self._hold_before_sweep_during_step: float = 0.0
+        self._wait_time_after_constant_before_stepping: float = 0.0
 
         self.status = Status.READY
 
@@ -522,4 +523,14 @@ class SMU(Board):
     def hold_before_sweep_during_step(self, value: float):
         self._hold_before_sweep_during_step = min(max(value, 0.0), 655.3)
         self._write(f"HT {self._hold_before_sweep_during_step}")
+        self._comm.checkForError()
+
+    @property
+    def wait_time_after_constant_before_stepping(self) -> float:
+        return self._wait_time_after_constant_before_stepping
+
+    @wait_time_after_constant_before_stepping.setter
+    def wait_time_after_constant_before_stepping(self, value: float):
+        self._wait_time_after_constant_before_stepping = min(max(value, 0.0), 100.0)
+        self._write(f"WT {self._wait_time_after_constant_before_stepping}")
         self._comm.checkForError()

@@ -22,7 +22,7 @@
 - [ ] `IN` - Set time between measurements for time-based measurements
 - [x] `LI` - Select measurements to be shown in table display mode
 - [ ] `NR` - Amount of measurements for time-based measurements
-- [ ] `WT` - Wait time, unsure of true function
+- [x] `WT` - Wait after constant source power before stepping
 - [x] `XN` - Set X axis measurements to display
 - [x] `XT` - Set X axis to display time
 - [x] `YA` and `YB` - Set Y1 and Y2 measurements to display
