@@ -40,7 +40,7 @@
 - [ ] `AC` - Calibrate a channel
 - [x] `BC` - Clear buffer
 - [ ] `DO` - Get time readings ? Maybe ? Idk ?
-- [ ] `EC` - Exit if compliance reached (saturation)
+- [x] `EC` - Exit if compliance reached (saturation)
 - [ ] `EM` - Switch to 4145 emulation mode
 - [ ] `IT` - SMU integration time (noisy, medium, quiet)
 - [x] `RD` - Get readings, available in real time

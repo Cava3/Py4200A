@@ -50,6 +50,7 @@ class KI4200A:
         #Private
         self._comms: Communications
         self._l_equipped: list[str]
+        self._exit_on_compliance: bool = False
         
 
         # Initialization process
@@ -271,3 +272,13 @@ class KI4200A:
     @read_termination.setter
     def read_termination(self, value: str) -> None:
         self._comms.read_termination = value
+
+    @property
+    def exit_on_compliance(self) -> bool:
+        return self._exit_on_compliance
+
+    @exit_on_compliance.setter
+    def exit_on_compliance(self, value: bool):
+        self._exit_on_compliance = value
+        self.write(f"EC {int(value)}")
+        self._comms.checkForError()
