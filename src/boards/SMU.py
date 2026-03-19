@@ -265,6 +265,7 @@ class SMU(Board):
 
         Raises:
             AttributeError: If the SMU settings are not properly defined.
+            KXCILimitationError: If the number of steps in a sweep exceeds 1024.
             KXCIConsoleError: If the instrument returns an error after sending the command.
         """
         # Attribute checking
