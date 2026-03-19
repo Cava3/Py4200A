@@ -23,6 +23,10 @@ class SMU(Board):
         hp (bool): Indicates if the SMU is a high-power model (e.g. HPSMU1)
         smu_type (SMUMode): The specific mode of the SMU (e.g., VM, VS, or SMU)
         measurements (list[Measurement]): List of measurements associated with this SMU (e.g., voltage, current)
+        delay_before_measure_during_sweep (float): The delay before measuring during a sweep
+        hold_before_sweep_during_step (float): The delay before sweeping during a step
+        wait_time_after_constant_before_stepping (float): The delay after a constant before stepping
+        power_off_after_test (bool): Indicates if the SMU should be powered off after a test
 
         voltageMeasurement (Measurement): The voltage measurement
         currentMeasurement (Measurement): The current measurement
