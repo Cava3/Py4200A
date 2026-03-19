@@ -8,6 +8,7 @@ SMUs, PMUs) that can be equipped in the KI4200A. The Board class provides common
 that can be inherited and extended by specific board classes, allowing for a structured and modular \
 approach to representing the various components of the instrument.
 """
+from ..results import Measurement
 from ..consts import Status, BoardType
 from ..instrcomms import Communications
 
@@ -20,25 +21,27 @@ class Board:
         name (str): The name of the board (e.g., "SMU1", "PMU2")
         status (str): Current status of the board (e.g., "Idle", "Measuring", "Error")
         slot (int): The slot number where the SMU is installed in the instrument
+        measurements (list[Measurement]): List of measurements associated with this board (e.g., voltage, current)
     """
 
     def __init__(self, name: str, comm: Communications) -> None:
         """
-        Initialize a Board instance with the given name and slot number.
+        Initialize a Board instance.
         Args:
             name (str): The name of the board (e.g., "SMU1", "PMU2").
-            slot (int): The slot number where the board is installed in the instrument.
+            comm (Communications): The communication object.
         """
         self.status: Status = Status.INITIALIZING
         self._name: str = name
         self.board_type: BoardType = BoardType.NONE
         self._slot = 0
         self._comm = comm
+        self.measurements: list[Measurement] = []
         self.status = Status.CONFIGURING
-        self.detect_type()
+        self.detectType()
         self.status = Status.READY
 
-    def detect_type(self) -> None:
+    def detectType(self) -> None:
         """
         Detect the type of the board based on its name and set the type attribute accordingly.
         This method can be extended to include more specific detection logic based on the instrument's \
@@ -61,7 +64,10 @@ class Board:
 
         Send a command to the instrument but doesn't read an answer.  
         Only for GPIB, as TCPIP always return a value, or "ACK".  
-        For TCPIP, redirects to `query`
+        For TCPIP, redirects to `query`.
+        
+        Args:
+            command (str): The command to send.
         """
         if self._comm.con_type == 1:
             self._comm.write(command)
@@ -83,9 +89,15 @@ class Board:
         return self._comm.query(command)
 
     def __str__(self) -> str:
+        """
+        Returns the string representation of the board (its name).
+        """
         return self.name
     
     def __eq__(self, other: object) -> bool:
+        """
+        Check equality based on the board's name.
+        """
         return isinstance(other, Board) and self.name == other.name
     
     # === Getters and setters ===

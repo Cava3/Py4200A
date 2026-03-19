@@ -1,11 +1,11 @@
 """
-KXCIError.py - Custom exception class for Keithley External Control Interface (KXCI) errors.
+KXCIConsoleError.py - Custom exception class for Keithley External Control Interface (KXCI) errors.
 Author: Lucas LE DUDAL
 """
 
-class KXCIError(Exception):
+class KXCIConsoleError(Exception):
     """
-    Exception raised for errors rreturned by KXCI commands.
+    Exception raised for errors returned by KXCI commands.
 
     Attributes:
         message (str): Explanation of the error.

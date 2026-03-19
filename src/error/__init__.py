@@ -1,1 +1,2 @@
-from .KXCIError import KXCIError #type: ignore
+from .KXCIConsoleError import KXCIConsoleError #type: ignore
+from .KXCILimitationError import KXCILimitationError #type: ignore

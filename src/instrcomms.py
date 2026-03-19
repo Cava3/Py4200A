@@ -4,7 +4,7 @@
 """
 
 import pyvisa as visa
-from .error import KXCIError
+from .error import KXCIConsoleError
 
 class Communications:
     """
@@ -16,7 +16,13 @@ class Communications:
     reuse, or enhance to your own liking and feel free to leave suggestions for improvement. Thanks!
     """
 
-    def __init__(self, instrument_resource_string: str):
+    def __init__(self, instrument_resource_string: str) -> None:
+        """
+        Initialize the Communications class.
+
+        Args:
+            instrument_resource_string (str): The VISA resource string for the instrument.
+        """
         self._instrument_resource_string: str = instrument_resource_string
         self._resource_manager: visa.ResourceManager | None = None
         self.instrument_object: visa.resources.MessageBasedResource
@@ -32,13 +38,13 @@ class Communications:
         except visa.VisaIOWarning as visawarning:
             print(f"{visawarning}")
 
-    def connect(self, instrument_resource_string: str | None = None, timeout: int | None = None):
+    def connect(self, instrument_resource_string: str | None = None, timeout: int | None = None) -> None:
         """
         Open an instance of an instrument object for remote communication.
 
         Args:
-            timeout (int): Time in milliseconds to wait before the communication transaction with the\
-                target instrument is considered failed (timed out).
+            instrument_resource_string (str | None): The VISA resource string. If None, uses the one from init.
+            timeout (int | None): Time in milliseconds to wait before timeouts.
         """
         try:
             if self._resource_manager is None:
@@ -87,7 +93,7 @@ class Communications:
             raise RuntimeError(msg) from visaerr
         return
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
         Close an instance of an instrument object.
         """
@@ -98,7 +104,7 @@ class Communications:
             print(f"{visaerr}")
         return
 
-    def write(self, command: str):
+    def write(self, command: str) -> None:
         """
         Issue controlling commands to the target instrument.
 
@@ -174,7 +180,7 @@ class Communications:
         if self.hasError():
             error_message = self.getError()
             self.clearError()
-            raise KXCIError(message=error_message)
+            raise KXCIConsoleError(message=error_message)
 
     # === Getters and setters ===
 

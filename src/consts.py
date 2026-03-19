@@ -53,5 +53,20 @@ class SweepType(Enum):
 
 class DisplayMode(Enum):
     """Enum for the 2 possible display modes"""
+    NONE = 0
     GRAPH = 1
     LIST = 2
+
+class GraphPosition(Enum):
+    """Enum for the 3 axis of the graph display"""
+    X = "XN"
+    Y1 = "YA"
+    Y2 = "YB"
+
+class RPMMode(Enum):
+    """Enum for the RPM switching modes"""
+    PMU = 0
+    CV_2W = 1
+    SMU = 2
+    CV_4W = 3
+

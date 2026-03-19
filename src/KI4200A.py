@@ -6,13 +6,13 @@ This module defines the KI4200A class, which provides methods to control the Kei
 The class uses the Communications class from the instrcomms module to handle low-level communication, \
 and provides user with high-level OOP to interact with the instrument in a more intuitive way.
 """
-
-from .Display import Display
+from .results import Display, Measurement
 from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
-from .consts import Status, BoardType
+from .consts import Status, BoardType, RPMMode
 from pyvisa.resources.gpib import GPIBInstrument
+import time as t
 
 class KI4200A:
     """
@@ -25,6 +25,7 @@ class KI4200A:
         status (Status): Current status of the instrument (e.g., "Initializing", "Connected", "Configuring").
         write_termination (str): The termination character(s) used when writing commands to the instrument.
         display (Display): The display controller for managing the instrument's display.
+        all_measurements (list[Measurement]): A list to keep track of all measurements configured on the instrument.
     """
 
     def __init__(self, instrument_resource_string: str) -> None:
@@ -42,6 +43,9 @@ class KI4200A:
         self.id: dict[str, str]
         self.status: Status             # KI4200A's current task or state
         self.l_equipment: list[Board]   # List of board objects equipped in the instrument
+        self.l_smus: list[SMU]          # List of SMU boards equipped in the instrument in slot order
+        self.display: Display           # Display controller for managing the instrument's display
+        self.all_measurements: list[Measurement] # List of all measurements configured on the instrument
         
         #Private
         self._comms: Communications
@@ -70,6 +74,9 @@ class KI4200A:
             "Software Version": ""    
         }
         self.scan()
+        self.all_measurements = [measurement for board in self.l_equipment for measurement in board.measurements]
+        self.l_smus = [board for board in self.l_equipment if board.board_type == BoardType.SMU and isinstance(board, SMU)]
+        self.l_smus.sort(key=lambda smu: smu.slot)
 
         self.status = Status.READY_NOT_RESET
 
@@ -84,22 +91,19 @@ class KI4200A:
         self.id["Brand"], self.id["Model"], self.id["Serial Number"], self.id["Software Version"] = idn[:4]
 
         self._l_equipped = self.query("*OPT?").split(",")
+        self._comms.checkForError()
 
-        if self._comms.hasError():
-            print(self.getError())
-            self._comms.clearError()
-            raise ValueError("Error during instrument scan. Please check the connection and try again.")
-
-        # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns \
+        # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns
         # FIXME: the second one. The first one is also displayed on KCon, so definitely a KXCI issue.
         # FIXME: Can be removed if fixed in more recent versions of KXCI
+        # FIXME: Update : RMP is configurable with commands, so it proves thats just a KXCI response problem.
         if "PMU1RPM1-2" in self._l_equipped and "PMU1RPM1-1" not in self._l_equipped:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
         # List and convert the boards
         l_boards: list[Board] = [Board(name=board_name, comm=self._comms) for board_name in self._l_equipped]
-        self.l_equipment = [self._type_board(board) for board in l_boards]
-
+        self.l_equipment = [self._typeBoard(board) for board in l_boards]
+        
 
     def reset(self) -> None:
         """
@@ -109,10 +113,10 @@ class KI4200A:
         self.write(":ERROR:LAST:CLEAR") # Clear last error
         self.write("*RST") # Reset instruments
 
-        if self._comms.hasError():
-            print(self.getError())
-            self._comms.clearError()
-            raise ValueError("Error during instrument reset. Please check the connection and try again.")
+        for smu in self.l_smus:
+            smu.deactivate()
+
+        self._comms.checkForError()
 
         self.status = Status.READY
 
@@ -163,23 +167,67 @@ class KI4200A:
         """
         self.__init__(self._instrument_resource_string)
 
-    def waitForDataReady(self, timout: int = 25_000) -> None:
+    def runSmuTest(self, clear_buffer: bool = True) -> None:
+        """
+        Starts the test sequence on the instrument.
+
+        Args: 
+             clearBuffer (bool) : wether to clear the result buffer. Defaults to True
+        """
+        # Switch RPMs to SMU
+
+        rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
+        for rpm in rpms:
+            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.SMU.value}")
+
+        # Run the test
+        self.write("MD")
+        if clear_buffer:
+            self.write("ME1")
+        else:
+            self.write("ME3")
+
+        # Reset RPMs after test
+        for rpm in rpms:
+            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.PMU.value}")
+
+    def abortTest(self) -> None:
+        """
+        Aborts the test sequence on the instrument.
+        """
+        self.write("MD")
+        self.write("ME4")
+
+    def waitForDataReady(self, timeout: int = 3) -> None:
         """
         Wait until the instrument has completed its current operation and is ready for the next command.
         This can be used after issuing a command that takes time to execute, to ensure that the instrument is\
         ready before sending the next command.
+
+        Args:
+            timeout (int) : Timeout in seconds for my workaround to the pyvvisa-py issue. Defaults to 3 seconds.
         """
         if isinstance(self._comms.instrument_object, GPIBInstrument):
-            # For GPIB, use the event manager
-            self._comms.instrument_object.wait_for_srq(timeout=timout)
+            # # For GPIB, use the event manager
+            # self._comms.instrument_object.wait_for_srq(timeout=timeout) # Not implemented in PyVisa-py !
+
+            # FIXME: PyVisa-py doesn't implement the wait_for_srq event.
+            # My workaround will be to check if a command that is not available while running times out or works.
+            t_start = 0
+            while t.time() > t_start + timeout:
+                t_start = t.time()
+                self.query("*OPT?")
+
         else:
             # For TCPIP, repeated requests until
-            while int(self.query("SP")) not in [0, 1]:
-                pass
+            while True:
+                response: str = self.query("SP")
+                if response.isnumeric() and int(response) in [0, 1]:
+                    break
 
     # === Private ===
 
-    def _type_board(self, b: Board) -> Board :
+    def _typeBoard(self, b: Board) -> Board :
         """
         A function to auto-type a board. Called upon board detection
 

@@ -3,15 +3,16 @@ CVU.py - Python module defining the CVU class, an CVU type board equipped in the
 Author: Lucas LE DUDAL
 
 This module defines the CVU class, which inherits from the Board class and represents a specific \
-type of board (an CVU) equipped in the KI4200A. The CVU class provides methods and attributes specific \
-to CVUs, such as [].
-""" # TODO:      ^
+type of board (a CVU) equipped in the KI4200A.
+"""
+
+from ..instrcomms import Communications
 from .Board import Board
 from ..consts import Status, BoardType
 
 class CVU(Board): # TODO:   v
     """
-    This class represents a [] (CVU) board equipped in the Keithley 4200A.
+    This class represents a Capacitance-Voltage Unit (CVU) board equipped in the Keithley 4200A.
 
     Attributes:
         name (str): The name of the CVU board (e.g., "CVU1", "CVU2")
@@ -20,13 +21,14 @@ class CVU(Board): # TODO:   v
 
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, comm: Communications) -> None:
         """
         Initialize an CVU instance with the given name and set its type to BoardType.CVU.
 
         Args:
             name (str): The name of the CVU board (e.g., "CVU1", "CVU2").
         """
+        super().__init__(name, comm)
         self.status = Status.INITIALIZING
         self._name: str = name
         self.board_type: BoardType = BoardType.CVU
@@ -45,7 +47,7 @@ class CVU(Board): # TODO:   v
         Returns:
             CVU: An instance of the CVU class.
         """
-        cvu = CVU(board.name)
+        cvu = CVU(board.name, board._comm)
         cvu.status = board.status
         return cvu
 

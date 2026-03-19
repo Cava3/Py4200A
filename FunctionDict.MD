@@ -7,26 +7,27 @@
 - [x] `CH` - Full SMU definition
 - [x] `VM` - Define as voltmeter only
 - [x] `VS` - Define as volt source
-- [ ] `DT` - Delay measurement during sweep (to counter the capacitive effect)
+- [x] `SS` - # Select page "Source Setup"
+- [x] `DT` - Delay measurement during sweep (to counter the capacitive effect)
 - [ ] `FS` and `RT` - Alternative sweep settings
-- [ ] `HT` - Delay between steps before starting the sweep
+- [x] `HT` - Delay between steps before starting the sweep
 - [x] `SC` - Constant voltage value (VS only)
 - [x] `ST` - Cut or keep power after test
 - [x] `VC` and `IC` - Constant voltage/intensity value
 - [x] `VL` and `IL` - Sweep list values
 - [x] `VP` and `IP` - Step settings
 - [x] `VR` and `IR` - Sweep function
-- [ ] `SM` - # Select page "Measurement setup"
-- [ ] `DM` - Select between table and graph display mode
+- [x] `SM` - # Select page "Measurement setup"
+- [x] `DM` - Select between table and graph display mode
 - [ ] `IN` - Set time between measurements for time-based measurements
-- [ ] `LI` - Select measurements to be shown in table display mode
+- [x] `LI` - Select measurements to be shown in table display mode
 - [ ] `NR` - Amount of measurements for time-based measurements
-- [ ] `WT` - Wait time, unsure of true function
-- [ ] `XN` - Set X axis measurements to display
-- [ ] `XT` - Set X axis to display time
-- [ ] `YA` and `YB` - Set Y1 and Y2 measurements to display
-- [ ] `MD` - # Select page "Measurement control"
-- [ ] `ME` - Run test
+- [x] `WT` - Wait after constant source power before stepping
+- [x] `XN` - Set X axis measurements to display
+- [x] `XT` - Set X axis to display time
+- [x] `YA` and `YB` - Set Y1 and Y2 measurements to display
+- [x] `MD` - # Select page "Measurement control"
+- [x] `ME` - Run test
 - [ ] `GT` - Loads data or program
 - [ ] `SV` - Save data or program
 - [ ] No page required
@@ -38,11 +39,11 @@
 - [ ] `TI` and `TV` - Trigger a measurement of wanted value
 - [ ] `AC` - Calibrate a channel
 - [x] `BC` - Clear buffer
-- [ ] `DO` - Get readings for a measurement
+- [ ] `DO` - Get time readings ? Maybe ? Idk ?
 - [ ] `EC` - Exit if compliance reached (saturation)
 - [ ] `EM` - Switch to 4145 emulation mode
 - [ ] `IT` - SMU integration time (noisy, medium, quiet)
-- [ ] `RD` - Get real time readings
+- [x] `RD` - Get readings, available in real time
 - [ ] `RG` - Set current rangewhen measuring
 - [ ] `RI` and `RV` - Set real-time intensity/voltage output
 - [ ] `RS` - Float precision (0-7)
