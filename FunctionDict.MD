@@ -33,7 +33,7 @@
 - [ ] No page required
 - [x] `MP` - Map a channel to a SMU, VS or VM
 - [ ] `SR` - Set source range
-- [ ] `US` - # Select page "User Mode" (real time ?)
+- [x] `US` - # Select page "User Mode" (real time ?)
 - [ ] `DI` and `DV` - Define as current/voltage source
 - [ ] `DS` - Set output value for voltage source
 - [ ] `TI` and `TV` - Trigger a measurement of wanted value
@@ -42,7 +42,7 @@
 - [ ] `DO` - Get time readings ? Maybe ? Idk ?
 - [x] `EC` - Exit if compliance reached (saturation)
 - [ ] `EM` - Switch to 4145 emulation mode
-- [ ] `IT` - SMU integration time (noisy, medium, quiet)
+- [x] `IT` - SMU integration time (noisy, medium, quiet)
 - [x] `RD` - Get readings, available in real time
 - [ ] `RG` - Set current rangewhen measuring
 - [ ] `RI` and `RV` - Set real-time intensity/voltage output

@@ -10,7 +10,7 @@ from .results import Display, Measurement
 from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
-from .consts import Status, BoardType, RPMMode
+from .consts import Status, BoardType, RPMMode, IntegrationTime
 from pyvisa.resources.gpib import GPIBInstrument
 import time as t
 
@@ -51,6 +51,7 @@ class KI4200A:
         self._comms: Communications
         self._l_equipped: list[str]
         self._exit_on_compliance: bool = False
+        self._integration_time: IntegrationTime = IntegrationTime.NORMAL
         
 
         # Initialization process
@@ -280,5 +281,17 @@ class KI4200A:
     @exit_on_compliance.setter
     def exit_on_compliance(self, value: bool):
         self._exit_on_compliance = value
+        self.write("US")
         self.write(f"EC {int(value)}")
+        self._comms.checkForError()
+
+    @property
+    def integration_time(self) -> IntegrationTime:
+        return self._integration_time
+
+    @integration_time.setter
+    def integration_time(self, value: IntegrationTime):
+        self._integration_time = value
+        self.write("US")
+        self.write(f"IT {value.value}")
         self._comms.checkForError()
