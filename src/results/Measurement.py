@@ -10,18 +10,6 @@ from ..instrcomms import Communications
 class Measurement:
     """
     This class represents a measurement configuration and its associated data.
-
-    Attributes:
-        name (str): The name of the measurement.
-        steps (int): The number of measurement steps.
-        order (int): Sweeping order of this measurement's source axis.  ``-1``
-            means not yet configured (cannot be used as a parameter).  ``0``
-            for a Sweep source (innermost loop); equal to the SMU's
-            ``stepper_index`` for a Step source (outermost loops, in
-            descending order).
-        min_value (float): The minimum value for the measurement range or display.
-        max_value (float): The maximum value for the measurement range or display.
-        is_log_scale (bool): Indicates if the measurement should be handled/displayed in log scale.
     """
 
     def __init__(self, comm: Communications, name: str, steps: int = -1, min_value: float = 0.0, max_value: float = 0.0, is_log_scale: bool = False, unit: SourceType = SourceType.NONE) -> None:
@@ -29,6 +17,7 @@ class Measurement:
         Initialize a Measurement instance.
 
         Args:
+            comm (Communications): The communication object used to query results.
             name (str): The name of the measurement.
             steps (int): The number of measurement steps.
             min_value (float): The minimum value.
@@ -133,6 +122,7 @@ class Measurement:
     # === Getters and setters ===
     @property
     def name(self) -> str:
+        """Alphanumeric measurement label used in KXCI commands (always uppercased)."""
         return self._name
     
     @name.setter
@@ -144,6 +134,7 @@ class Measurement:
 
     @property
     def min_value(self) -> float:
+        """Lower bound of the measurement display range. Clamped to hardware limits."""
         return self._min_value
     
     @min_value.setter
@@ -153,6 +144,7 @@ class Measurement:
 
     @property
     def max_value(self) -> float:
+        """Upper bound of the measurement display range. Clamped to hardware limits."""
         return self._max_value
     
     @max_value.setter

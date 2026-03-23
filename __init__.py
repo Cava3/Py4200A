@@ -9,3 +9,4 @@ allowing users to perform measurements, set up test configurations, and retrieve
 from .src.KI4200A import KI4200A    # type: ignore
 from .src import consts             # type: ignore
 from .src import boards             # type: ignore
+from .src import results            # type: ignore

@@ -19,15 +19,6 @@ import numpy as np
 class KI4200A:
     """
     This class represents the Keithley 4200A Semiconductor Characterization System.
-
-    Attributes:
-        id (dict[str, str]): identifying informations of the instrument (result of the `*IDN?` query)
-        l_equipment (list[Board]): List of equipped modules in the instrument.
-        read_termination (str): The termination character(s) used when reading responses from the instrument
-        status (Status): Current status of the instrument (e.g., "Initializing", "Connected", "Configuring").
-        write_termination (str): The termination character(s) used when writing commands to the instrument.
-        display (Display): The display controller for managing the instrument's display.
-        all_measurements (list[Measurement]): A list to keep track of all measurements configured on the instrument.
     """
 
     def __init__(self, instrument_resource_string: str) -> None:
@@ -229,47 +220,18 @@ class KI4200A:
                 if response.isnumeric() and int(response) in [0, 1]:
                     break
 
-    # === Private ===
-
-    def _typeBoard(self, b: Board) -> Board :
-        """
-        A function to auto-type a board. Called upon board detection
-
-        Args:
-            b (Board): the Board to be converted
-        
-        Returns:
-            Board: A board converted (if possible) to corresponding subclass
-        """
-
-        if b.board_type == BoardType.SMU :
-            return SMU.of(b)
-        elif b.board_type == BoardType.CVU :
-            return CVU.of(b)
-        elif b.board_type == BoardType.PMU_RPM :
-            return PMU_RPM.of(b)
-
-        return b
-
     def makeDependentFrom(self, data: Measurement, params: list[Measurement]) -> BlobDependent:
         """
         Build a :class:`BlobDependent` from a data measurement and a list of parameter measurements.
 
-        Each parameter measurement contributes one axis to the result.  Its
-        ``steps`` attribute defines the length of that axis and its
-        :meth:`~Measurement.getResultSerie` values become the coordinate array.
-        The data measurement is fetched as a flat series and reshaped into the
-        N-D array whose shape is ``(params[0].steps, params[1].steps, …)``.
+        Each parameter measurement contributes one axis to the result.  Its ``steps`` attribute defines
+        the length of that axis and its :meth:`~Measurement.getResultSerie` values become the coordinate array.  
+        The data measurement is fetched as a flat series and reshaped into the N-D array whose shape is
+        ``(params[0].steps, params[1].steps, …)`` after sorting the Measurements by order.
 
         Args:
-            data (Measurement): The measurement whose values populate the data
-                array.  Its ``steps`` must equal the product of all parameter
-                ``steps``.
-            params (list[Measurement]): Parameter measurements in any order.
-                They are automatically sorted by ``order`` (Step sources first,
-                in ascending ``stepper_index`` order; Sweep source last) so
-                that the resulting array axes match the actual nesting of loops
-                on the instrument.
+            data (Measurement): The measurement that contains the raw result data.
+            params (list[Measurement]): Parameter measurements in any order. Will be sorted to correctly shape results.
 
         Returns:
             BlobDependent: The structured N-dimensional result, labelled with
@@ -317,6 +279,29 @@ class KI4200A:
             label=data.name,
         )
 
+
+    # === Private ===
+
+    def _typeBoard(self, b: Board) -> Board :
+        """
+        A function to auto-type a board. Called upon board detection
+
+        Args:
+            b (Board): the Board to be converted
+        
+        Returns:
+            Board: A board converted (if possible) to corresponding subclass
+        """
+
+        if b.board_type == BoardType.SMU :
+            return SMU.of(b)
+        elif b.board_type == BoardType.CVU :
+            return CVU.of(b)
+        elif b.board_type == BoardType.PMU_RPM :
+            return PMU_RPM.of(b)
+
+        return b
+
     def __del__(self) -> None:
         """
         Destructor to ensure proper disconnection from the instrument when the KI4200A object is deleted.
@@ -328,22 +313,25 @@ class KI4200A:
 
     @property
     def write_termination(self) -> str:
+        """The termination character(s) appended to every command written to the instrument."""
         return self._comms.write_termination
-    
+
     @write_termination.setter
     def write_termination(self, value: str) -> None:
         self._comms.write_termination = value
 
     @property
     def read_termination(self) -> str:
+        """The termination character(s) expected at the end of every response from the instrument."""
         return self._comms.read_termination
-    
+
     @read_termination.setter
     def read_termination(self, value: str) -> None:
         self._comms.read_termination = value
 
     @property
     def exit_on_compliance(self) -> bool:
+        """If ``True``, the sweep stops as soon as a compliance limit is hit."""
         return self._exit_on_compliance
 
     @exit_on_compliance.setter
@@ -355,6 +343,7 @@ class KI4200A:
 
     @property
     def integration_time(self) -> IntegrationTime:
+        """Integration time used for each measurement point."""
         return self._integration_time
 
     @integration_time.setter

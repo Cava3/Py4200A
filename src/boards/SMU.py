@@ -15,23 +15,6 @@ from ..error import KXCILimitationError
 class SMU(Board):
     """
     This class represents a Source Measure Unit (SMU) board equipped in the Keithley 4200A.
-
-    Attributes:
-        name (str): The name of the SMU board (e.g., "SMU1", "SMU2")
-        status (str): Current status of the SMU board (e.g., "Idle", "Measuring", "Error")
-        slot (int): The slot number where the SMU is installed in the instrument
-        hp (bool): Indicates if the SMU is a high-power model (e.g. HPSMU1)
-        smu_type (SMUMode): The specific mode of the SMU (e.g., VM, VS, or SMU)
-        measurements (list[Measurement]): List of measurements associated with this SMU (e.g., voltage, current)
-        delay_before_measure_during_sweep (float): The delay before measuring during a sweep
-        hold_before_sweep_during_step (float): The delay before sweeping during a step
-        wait_time_after_constant_before_stepping (float): The delay after a constant before stepping
-        power_off_after_test (bool): Indicates if the SMU should be powered off after a test
-
-        voltageMeasurement (Measurement): The voltage measurement
-        currentMeasurement (Measurement): The current measurement
-        sourceType (consts.SourceType): The type of source (VOLT, AMPERE, or COMMON)
-        sourceFunction (consts.SourceFunction): The function to apply to the source (SWEEP, STEP, CONSTANT)
     """
 
     stepper_index: int = 0
@@ -43,6 +26,7 @@ class SMU(Board):
 
         Args:
             name (str): The name of the SMU board (e.g., "SMU1", "SMU2").
+            comm (Communications): The communication object used to send commands.
         """
         super().__init__(name, comm)
         # General usage
@@ -477,6 +461,7 @@ class SMU(Board):
 
     @property
     def smu_type(self) -> SMUMode:
+        """Active operating mode of this SMU channel (SMU, VS, or VM)."""
         return self._smu_type
     
     @smu_type.setter
@@ -490,6 +475,7 @@ class SMU(Board):
 
     @property
     def constant_value(self) -> float:
+        """Source level used when ``source_function`` is CONSTANT. Clamped to the hardware range."""
         return self._constant_value
     
     @constant_value.setter
@@ -502,6 +488,7 @@ class SMU(Board):
 
     @property
     def compliance(self) -> float:
+        """Compliance limit for the source. Clamped to the hardware range."""
         return self._compliance
 
     @compliance.setter
@@ -511,6 +498,7 @@ class SMU(Board):
 
     @property
     def power_off_after_test(self) -> bool:
+        """If ``True``, the SMU output is disabled after the test completes."""
         return self._poweroff_after_test
 
     @power_off_after_test.setter
@@ -522,6 +510,7 @@ class SMU(Board):
 
     @property
     def func_start(self) -> float:
+        """Start value of the sweep or step function. Clamped to the hardware range."""
         return self._func_start
 
     @func_start.setter
@@ -531,6 +520,7 @@ class SMU(Board):
 
     @property
     def func_stop(self) -> float:
+        """Stop value of the sweep function. Clamped to the hardware range."""
         return self._func_stop
 
     @func_stop.setter
@@ -540,6 +530,7 @@ class SMU(Board):
 
     @property
     def func_step(self) -> float:
+        """Step increment of the sweep or step function. Clamped to the hardware range."""
         return self._func_step
 
     @func_step.setter
@@ -549,6 +540,7 @@ class SMU(Board):
 
     @property
     def num_steps(self) -> int:
+        """Number of steps for a step function. Clamped to [0, 32]."""
         return self._num_steps
     
     @num_steps.setter
@@ -557,6 +549,7 @@ class SMU(Board):
 
     @property
     def delay_before_measure_during_sweep(self) -> float:
+        """Delay (s) inserted before each measurement point during a sweep. Clamped to [0, 6.553]."""
         return self._delay_before_measure_during_sweep
 
     @delay_before_measure_during_sweep.setter
@@ -567,6 +560,7 @@ class SMU(Board):
 
     @property
     def hold_before_sweep_during_step(self) -> float:
+        """Hold time (s) at the beginning of each step before the inner sweep starts. Clamped to [0, 655.3]."""
         return self._hold_before_sweep_during_step
 
     @hold_before_sweep_during_step.setter
@@ -577,6 +571,7 @@ class SMU(Board):
 
     @property
     def wait_time_after_constant_before_stepping(self) -> float:
+        """Wait time (s) applied after a constant-source phase before stepping. Clamped to [0, 100.0]."""
         return self._wait_time_after_constant_before_stepping
 
     @wait_time_after_constant_before_stepping.setter

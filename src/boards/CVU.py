@@ -13,12 +13,6 @@ from ..consts import Status, BoardType
 class CVU(Board): # TODO:   v
     """
     This class represents a Capacitance-Voltage Unit (CVU) board equipped in the Keithley 4200A.
-
-    Attributes:
-        name (str): The name of the CVU board (e.g., "CVU1", "CVU2")
-        status (str): Current status of the CVU board (e.g., "Idle", "Measuring", "Error")
-        type (BoardType): The type of the board, set to BoardType.CVU
-
     """
 
     def __init__(self, name: str, comm: Communications) -> None:
@@ -27,6 +21,7 @@ class CVU(Board): # TODO:   v
 
         Args:
             name (str): The name of the CVU board (e.g., "CVU1", "CVU2").
+            comm (Communications): The communication object used to send commands.
         """
         super().__init__(name, comm)
         self.status = Status.INITIALIZING

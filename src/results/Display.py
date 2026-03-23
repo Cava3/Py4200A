@@ -12,9 +12,6 @@ class Display:
     """
     This class provides methods to control the display of the Keithley 4200A,
     such as clearing the screen, displaying messages, or controlling the backlight.
-
-    Attributes:
-        displayMode (DisplayMode): The display mode on KXCI.
     """
 
     def __init__(self, comm: Communications) -> None:
@@ -71,6 +68,7 @@ class Display:
     # === Getters / Setters ===
     @property
     def display_mode(self) -> DisplayMode:
+        """Active display mode on KXCI. Setting this property sends the corresponding command to the instrument."""
         return self._display_mode
 
     @display_mode.setter

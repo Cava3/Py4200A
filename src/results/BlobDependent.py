@@ -1,7 +1,7 @@
 """
 BlobDependent.py - Python module defining the BlobDependent class to store
 N-dimensional data arrays with named, typed parameter axes, analogous to the
-MATLAB Dependent class used in K4200 measurement workflows.
+MATLAB Dependent class used in USAL measurement workflows.
 Author: Lucas LE DUDAL
 """
 import numpy as np
@@ -18,11 +18,6 @@ class BlobDependent:
     * The *k*-th key of ``parameters`` corresponds to the *k*-th axis of
       ``data``.
     * The length of each coordinate array must match the size of its axis.
-
-    Attributes:
-        label (str): Human-readable label for the stored quantity
-            (e.g. ``"Drain current [A]"``).
-        log (str): Free-form log string (measurement notes, timestamps, …).
 
     Example:
         >>> import numpy as np
@@ -106,9 +101,7 @@ class BlobDependent:
         self.label: str = label
         self.log: str = log
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
+    # === Properties ===
 
     @property
     def value(self) -> np.ndarray:
@@ -139,9 +132,7 @@ class BlobDependent:
         """Number of dimensions of the data array, identical to ``value.ndim``."""
         return self._data.ndim
 
-    # ------------------------------------------------------------------
-    # Dunder methods
-    # ------------------------------------------------------------------
+    # === Dunder methods ===
 
     def __repr__(self) -> str:
         dims = ", ".join(

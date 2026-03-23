@@ -30,7 +30,7 @@
 - [x] `ME` - Run test
 - [ ] `GT` - Loads data or program
 - [ ] `SV` - Save data or program
-- [ ] No page required
+- [x] No page required
 - [x] `MP` - Map a channel to a SMU, VS or VM
 - [ ] `SR` - Set source range
 - [x] `US` - # Select page "User Mode" (real time ?)

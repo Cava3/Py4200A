@@ -1,10 +1,11 @@
 # Py4200A
 
 > [!CAUTION]
-> ***This project is under development. It is nowhere near being functionnal yet. You can check branches to see where the development is going.***
+> ***This project is under development. The current main branch is working, but all the features are not available yet.***
 
 py4200A is a python library that provides support for controlling the Keithley Instrument 4200A SCS.  
 The library is object oriented, to make it easy to use. It translates settings to instructions for KXCI.  
+Made in collaboration with the USAL (University of SALamanca) in Salamanca, Spain.
 
 ## Install
 
@@ -57,7 +58,7 @@ I have yet to confirm if the real requirement would just be to have a DHCP serve
 In Python, import the lib to use it. Here is an example of code to test if everything is working.
 ```py
 import py4200A
-from py4200A import *
+from py4200A import KI4200A
 
 #> Connecting to the Keithley
 # INST_RESOURCE_STR = "TCPIP0::192.0.2.0::1225::SOCKET"
@@ -88,15 +89,18 @@ ki4200.runSmuTest()
 ki4200.waitForDataReady()
 print("Done.")
 
-#> Get the results
-src_v = source.voltage_measurement.getAllResults()
-src_i = source.current_measurement.getAllResults()
+#> Collect results as a BlobDependent
+result: py4200A.results.BlobDependent = ki4200.makeDependentFrom(
+    data=source.current_measurement,
+    params=[source.voltage_measurement, gate.voltage_measurement],
+)
 
-#> Disconnect is not required but good practice
+#> Disconnect (while not required, it's good practice)
 ki4200.disconnect()
+
 ``` 
 This example code allows to test the gate on a standard MOSFET. After execution, the Keithley should display
-6 curves one above another. Each curve represents a different gate voltage (the step function) from 0 to 6
+6 curves one above another. Each curve represents a different gate voltage (the step function) from 0 to 5
 (as defined in the program). Each point shows how much current goes through the source depending on the
 source voltage (sweep function).  
 
@@ -105,41 +109,25 @@ source voltage (sweep function).
 
 You can display (plot) the graph on your computer by adding these few lines :
 ```py
-#> Plotting
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-plt.plot(src_v, src_i)
+
+#> Plot ISRC vs VSRC, one curve per VGT value
+colors: list[str] = ["red", "green", "blue", "magenta", "yellow", "cyan"]
+vgt_values = result.parameters["VGT"]
+vsrc_values = result.parameters["VSRC"]
+
+fig, ax = plt.subplots()
+for i, vgt in enumerate(vgt_values):
+    ax.plot(vsrc_values, result.value[i, :], color=colors[i % len(colors)], label=f"Gate = {vgt:.2f} V")
+
+ax.set_xlabel("Vsource (V)")
+ax.set_ylabel("Isource (A)")
+ax.legend()
+plt.tight_layout()
 plt.show()
 ```
-
-## Supported features
-This list is non-exhaustive and lacks the different board types.
-
-**KI4200**
-- [x] Connection
-- [x] Device informations
-- [x] Boards list
-- [x] Direct instruction query
-- [x] Run test
-
-**SMU**
-- [x] Choose between voltage and amps
-- [x] Constant source
-- [x] Sweep source
-- [x] Step source
-- [x] Voltmeter
-
-**CVU**
-- [ ] WIP
-
-**PMU_RPM**
-- [ ] WIP
-
-**Utils**
-- [ ] Export results
-- [ ] Save and load configs
-- [x] Display graph
-- [ ] Import results and export multi-results
-
 
 ## Roadmap
 - [x] Connection to KI4200A-SCS through PCIB or TCPIP
@@ -150,8 +138,10 @@ This list is non-exhaustive and lacks the different board types.
 - [x] Allow test execution
 - [x] Basic result retrieval
 - [x] Analysis and plotting
+- [ ] PMU RMP commands
+- [ ] Publish on PyPi
+- [ ] Matlab wrapper
 - [ ] Util to export results to CSV, txt, raw binary
-- [ ] Extended instruction set
 - [ ] Util to save/export and load/import settings profiles
 - [ ] Export to XLSX
 - [ ] Full instruction dictionnary capabilities
@@ -171,3 +161,4 @@ good and proper usage of AI tools though. Simply keep your code relevant and rea
 [linux-gpib](https://github.com/coolshou/linux-gpib) - GPIB driver I'm using on my Linux (Ubuntu) laptop.  
 [PyGPIB] -  
 [PyGPIB-py] -  
+[USAL] -

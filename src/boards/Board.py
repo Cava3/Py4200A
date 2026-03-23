@@ -15,21 +15,15 @@ from ..instrcomms import Communications
 class Board:
     """
     This class represents a generic board or module equipped in the Keithley 4200A.
-
-    Attributes:
-        board_type (BoardType): The type of board, detected from it's name
-        name (str): The name of the board (e.g., "SMU1", "PMU2")
-        status (str): Current status of the board (e.g., "Idle", "Measuring", "Error")
-        slot (int): The slot number where the SMU is installed in the instrument
-        measurements (list[Measurement]): List of measurements associated with this board (e.g., voltage, current)
     """
 
     def __init__(self, name: str, comm: Communications) -> None:
         """
         Initialize a Board instance.
+
         Args:
             name (str): The name of the board (e.g., "SMU1", "PMU2").
-            comm (Communications): The communication object.
+            comm (Communications): The communication object used to send commands.
         """
         self.status: Status = Status.INITIALIZING
         self._name: str = name
@@ -104,14 +98,16 @@ class Board:
 
     @property
     def name(self) -> str:
+        """The board identifier as reported by the instrument (e.g. ``"SMU1"``). Read-only."""
         return self._name
-    
+
     @name.setter
     def name(self, value: str):
         raise Exception("Name is read-only and cannot be changed after initialization.")
 
     @property
     def slot(self) -> int:
+        """Physical slot number where the board is installed in the mainframe. Read-only."""
         return self._slot
 
     @slot.setter
