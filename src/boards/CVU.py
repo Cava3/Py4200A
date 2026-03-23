@@ -32,7 +32,7 @@ class CVU(Board): # TODO:   v
         self.status = Status.INITIALIZING
         self._name: str = name
         self.board_type: BoardType = BoardType.CVU
-        self.status= Status.READY
+        self.status = Status.READY
 
     # === Factory ===
 

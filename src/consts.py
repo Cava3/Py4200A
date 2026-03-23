@@ -70,3 +70,9 @@ class RPMMode(Enum):
     SMU = 2
     CV_4W = 3
 
+class IntegrationTime(Enum):
+    """Enum for SMU integration time (IT)"""
+    SHORT = 1
+    NORMAL = 2
+    LONG = 3
+
