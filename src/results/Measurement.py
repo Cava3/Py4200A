@@ -75,6 +75,20 @@ class Measurement:
         return float(value) != 0
 
 
+    def getResultSerie(self) -> list[float]:
+        """
+        Fetch exactly the first ``steps`` measurement results from the instrument.
+
+        Returns:
+            list[float]: The list of the first ``steps`` measurement values retrieved from the instrument.
+        """
+        l_readings: list[float] = []
+        for index in range(1, self.steps + 1):
+            value: str = self.getResultAt(index)
+            l_readings.append(float(value))
+
+        return l_readings
+
     def getAllResults(self) -> list[float]:
         """
         Fetch the measurement results from the instrument.
