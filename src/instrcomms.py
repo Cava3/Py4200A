@@ -60,9 +60,9 @@ class Communications:
                 self._instrument_resource_string
             )
 
-            if issubclass(type(t_resource), visa.resources.MessageBasedResource):
+            if isinstance(t_resource, visa.resources.MessageBasedResource):
                 self.instrument_object = t_resource # type: ignore
-                self.con_type = int(issubclass(type(t_resource), visa.resources.GPIBInstrument))
+                self.con_type = int(isinstance(t_resource, visa.resources.GPIBInstrument))
             else :
                 raise Exception("Resource is not message-based")
 
@@ -97,6 +97,8 @@ class Communications:
         """
         Close an instance of an instrument object.
         """
+        if not hasattr(self, "instrument_object"):
+            return
         try:
             self.instrument_object.close()
             self.con_type = -1
@@ -134,7 +136,7 @@ class Communications:
         Note that the information received will depend on the command sent and will be in string format.
 
         Args:
-            command (str): The command issued to the instrument to make itvperform some action or service.
+            command (str): The command issued to the instrument to make it perform some action or service.
 
         Returns:
             (str): The requested information returned from the target instrument.
@@ -199,3 +201,7 @@ class Communications:
     @read_termination.setter
     def read_termination(self, value: str) -> None:
         self.instrument_object.read_termination = value
+
+    @property
+    def timeout(self) -> int:
+        return self._timeout

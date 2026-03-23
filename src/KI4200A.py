@@ -118,6 +118,12 @@ class KI4200A:
         for smu in self.l_smus:
             smu.deactivate()
 
+        rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
+        # Reset RPMs
+        for rpm in rpms:
+            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.PMU.value}")
+
+
         self._comms.checkForError()
 
         self.status = Status.READY
@@ -177,7 +183,6 @@ class KI4200A:
              clearBuffer (bool) : wether to clear the result buffer. Defaults to True
         """
         # Switch RPMs to SMU
-
         rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
         for rpm in rpms:
             self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.SMU.value}")
@@ -189,10 +194,6 @@ class KI4200A:
         else:
             self.write("ME3")
 
-        # Reset RPMs after test
-        for rpm in rpms:
-            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.PMU.value}")
-
     def abortTest(self) -> None:
         """
         Aborts the test sequence on the instrument.
@@ -200,14 +201,11 @@ class KI4200A:
         self.write("MD")
         self.write("ME4")
 
-    def waitForDataReady(self, timeout: int = 3) -> None:
+    def waitForDataReady(self) -> None:
         """
         Wait until the instrument has completed its current operation and is ready for the next command.
         This can be used after issuing a command that takes time to execute, to ensure that the instrument is\
         ready before sending the next command.
-
-        Args:
-            timeout (int) : Timeout in seconds for my workaround to the pyvvisa-py issue. Defaults to 3 seconds.
         """
         if isinstance(self._comms.instrument_object, GPIBInstrument):
             # # For GPIB, use the event manager
@@ -216,9 +214,11 @@ class KI4200A:
             # FIXME: PyVisa-py doesn't implement the wait_for_srq event.
             # My workaround will be to check if a command that is not available while running times out or works.
             t_start = 0
-            while t.time() > t_start + timeout:
+            while t.time() >= t_start + self._comms.timeout/1000:
                 t_start = t.time()
                 self.query("*OPT?")
+
+            self.write(":ERROR:LAST:CLEAR")
 
         else:
             # For TCPIP, repeated requests until

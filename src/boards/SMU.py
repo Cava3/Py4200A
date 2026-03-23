@@ -70,7 +70,7 @@ class SMU(Board):
 
         self._func_start: float = 0.0
         self._func_stop: float = 0.0
-        self._funcStep: float = 0.0
+        self._func_step: float = 0.0
         self.sweep_type: SweepType = SweepType.LINEAR
         self._num_steps: int = 0
         self._delay_before_measure_during_sweep: float = 0.0
@@ -169,8 +169,9 @@ class SMU(Board):
         self._comm.checkForError()
 
         # Stepper index
-        SMU.stepper_index += 1
-        self._stepper_index = SMU.stepper_index
+        if self.source_function == SourceFunction.STEP:
+            SMU.stepper_index += 1
+            self._stepper_index = SMU.stepper_index
     
     def setupSMU(self, voltage_measure_name: str = "", current_measure_name: str = "", source_type: SourceType = SourceType.NONE, source_function: SourceFunction = SourceFunction.NONE) -> None:
         """
@@ -209,6 +210,11 @@ class SMU(Board):
         self._write(command)
 
         self._comm.checkForError()
+
+        # Stepper index
+        if self.source_function == SourceFunction.STEP:
+            SMU.stepper_index += 1
+            self._stepper_index = SMU.stepper_index
 
     # Source setup
     def setConstantSourceValue(self, value: float = 0.0, compliance: float = 0.0) -> None:
@@ -249,6 +255,11 @@ class SMU(Board):
             raise AttributeError("For source functions other than CONSTANT, please use sweepValues or stepValues.")
 
         self._comm.checkForError()
+
+        if self.source_type == SourceType.VOLT:
+            self.voltage_measurement.steps = 1
+        elif self.source_type == SourceType.AMPERE:
+            self.current_measurement.steps = 1
 
 
     def setSweepFunction(self, sweepType: SweepType = SweepType.LINEAR, start: float = 0.0, stop: float = 0.0, step: float = 0.0, compliance: float = 0.0) -> None:
@@ -300,11 +311,13 @@ class SMU(Board):
 
         # Update measurements
         if self.source_type == SourceType.VOLT:
+            self.voltage_measurement.steps = int((self.func_stop - self.func_start)/self.func_step) + 1
             self.voltage_measurement.min_value = min(self.func_start, self.func_stop)
             self.voltage_measurement.max_value = max(self.func_start, self.func_stop)
             self.current_measurement.min_value = -abs(self.compliance)
             self.current_measurement.max_value = abs(self.compliance)
         elif self.source_type == SourceType.AMPERE:
+            self.current_measurement.steps = int((self.func_stop - self.func_start)/self.func_step) + 1
             self.current_measurement.min_value = min(self.func_start, self.func_stop)
             self.current_measurement.max_value = max(self.func_start, self.func_stop)
             self.voltage_measurement.min_value = -abs(self.compliance)
@@ -342,7 +355,7 @@ class SMU(Board):
 
         # Generate command
         prefix: str = "VP" if self.source_type == SourceType.VOLT else "IP"
-        command: str = f"{prefix} {self.func_start}, {self.func_step}, {self.num_steps}, {self.compliance}, {self.stepper_index}"
+        command: str = f"{prefix} {self.func_start}, {self.func_step}, {self.num_steps}, {self.compliance}, {self._stepper_index}"
 
         self._write("SS")
         self._write(command)
@@ -351,11 +364,13 @@ class SMU(Board):
 
         # Update measurements
         if self.source_type == SourceType.VOLT:
+            self.voltage_measurement.steps = self.num_steps
             self.voltage_measurement.min_value = min(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.voltage_measurement.max_value = max(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.current_measurement.min_value = -abs(self.compliance)
             self.current_measurement.max_value = abs(self.compliance)
         elif self.source_type == SourceType.AMPERE:
+            self.current_measurement.steps = self.num_steps
             self.current_measurement.min_value = min(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.current_measurement.max_value = max(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.voltage_measurement.min_value = -abs(self.compliance)
@@ -378,7 +393,7 @@ class SMU(Board):
             AttributeError: If the SMU settings are not properly defined.
             KXCIConsoleError: If the instrument returns an error after sending the command.
         """
-        num_step = int(abs(stop - start) / step) if step != 0 else 0
+        num_step = (int(abs(stop - start) / step) + 1) if step != 0 else 0
         self.setStepFunction2(start = start, step = step, num_steps = num_step, compliance = compliance)
 
     def setListSweep(self, values: list[float], compliance: float = 0.0, master: bool = False) -> None:
@@ -409,7 +424,7 @@ class SMU(Board):
         self.compliance = compliance if compliance != 0.0 else self.compliance
 
         # Generate command
-        prefix: str = "VL" if self.smu_type == SMUMode.VS else "IL"
+        prefix: str = "VL" if self.source_type == SourceType.VOLT else "IL"
         list_str: str = ", ".join([str(x) for x in values])
         command: str = prefix + str(self.slot) + ", " + str(int(master)) + ", " + str(self.compliance) + ", " + list_str
 
@@ -417,6 +432,21 @@ class SMU(Board):
         self._write(command)
 
         self._comm.checkForError()
+
+        # Update measurements
+        if self.source_type == SourceType.VOLT:
+            self.voltage_measurement.steps = len(values)
+            self.voltage_measurement.min_value = min(values)
+            self.voltage_measurement.max_value = max(values)
+            self.current_measurement.min_value = -abs(self.compliance)
+            self.current_measurement.max_value = abs(self.compliance)
+        elif self.source_type == SourceType.AMPERE:
+            self.current_measurement.steps = len(values)
+            self.current_measurement.min_value = min(values)
+            self.current_measurement.max_value = max(values)
+            self.voltage_measurement.min_value = -abs(self.compliance)
+            self.voltage_measurement.max_value = abs(self.compliance)
+
 
     # === Private / Utils ===
 
@@ -470,7 +500,7 @@ class SMU(Board):
 
     @compliance.setter
     def compliance(self, value: float):
-        minmax: tuple[float, float] = (-210.0, 210.0) if self.source_type == SourceType.AMPERE else (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
+        minmax: tuple[float, float] = (-210.0, 210.0) if self.source_type == SourceType.VOLT else (-0.105, 0.105) if not self.hp else (-1.05, 1.05)
         self._compliance = min(max(value, minmax[0]), minmax[1])
 
     @property
@@ -496,11 +526,20 @@ class SMU(Board):
     @property
     def func_stop(self) -> float:
         return self._func_stop
-    
+
     @func_stop.setter
     def func_stop(self, value: float):
         minmax: tuple[float, float] = (-210.0, 210.0) if self.source_type == SourceType.VOLT else (-1.05, 1.05) if self.hp else (-0.105, 0.105)
         self._func_stop = min(max(value, minmax[0]), minmax[1])
+
+    @property
+    def func_step(self) -> float:
+        return self._func_step
+
+    @func_step.setter
+    def func_step(self, value: float):
+        minmax: tuple[float, float] = (-210.0, 210.0) if self.source_type == SourceType.VOLT else (-1.05, 1.05) if self.hp else (-0.105, 0.105)
+        self._func_step = min(max(value, minmax[0]), minmax[1])
 
     @property
     def num_steps(self) -> int:

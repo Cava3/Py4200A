@@ -13,17 +13,19 @@ class Measurement:
 
     Attributes:
         name (str): The name of the measurement.
+        steps (int): The number of measurement steps.
         min_value (float): The minimum value for the measurement range or display.
         max_value (float): The maximum value for the measurement range or display.
         is_log_scale (bool): Indicates if the measurement should be handled/displayed in log scale.
     """
 
-    def __init__(self, comm: Communications, name: str, min_value: float = 0.0, max_value: float = 0.0, is_log_scale: bool = False, unit: SourceType = SourceType.NONE) -> None:
+    def __init__(self, comm: Communications, name: str, steps: int = -1, min_value: float = 0.0, max_value: float = 0.0, is_log_scale: bool = False, unit: SourceType = SourceType.NONE) -> None:
         """
         Initialize a Measurement instance.
 
         Args:
             name (str): The name of the measurement.
+            steps (int): The number of measurement steps.
             min_value (float): The minimum value.
             max_value (float): The maximum value.
             is_log_scale (bool): True for logarithmic scale, False for linear.
@@ -34,12 +36,13 @@ class Measurement:
         self._max_value: float = 0
         self._com: Communications = comm
         self.unit: SourceType = unit
+        self.steps: int = steps
         self.name = name
         self.min_value = min_value
         self.max_value = max_value
         self.is_log_scale = is_log_scale
 
-    def getResultAt(self, index: int) -> float:
+    def getResultAt(self, index: int) -> str:
         """
         Fetch the measurement result at a specific index.
 
@@ -47,28 +50,29 @@ class Measurement:
             index (int): The index at which to fetch the measurement result.
 
         Returns:
-            float: The measurement result at the specified index.
+            str: The raw measurement result at the specified index.
         """
         str_result: str = self._com.query(f"RD '{self.name}', {index}")
         self._com.checkForError()
-        
-        try:
-            return float(str_result)
-        except ValueError:
-            raise ValueError(f'KXCI returned an invalid result for string to float conversion : {str_result}')
 
+        return str_result
 
-    def isResultReady(self, index: int) -> bool:
+    def isResultValid(self, value: str) -> bool:
         """
-        Check if the measurement result is ready at a specific index.
+        Check if a value is a valid measurement.
 
         Args:
-            index (int): The index at which to check the measurement result.
+            value (str) : The value for which to check validity
 
         Returns:
-            bool: True if the measurement result is ready, False otherwise.
+            bool: True if the measurement value is valid, False otherwise.
         """
-        return self.getResultAt(index) != 0.0
+        try:
+            float(value)
+        except ValueError:
+            return False
+
+        return float(value) != 0
 
 
     def getAllResults(self) -> list[float]:
@@ -80,13 +84,15 @@ class Measurement:
         """
         l_readings: list[float] = []
         index: int = 1
-        while self.isResultReady(index):
-            l_readings.append(self.getResultAt(index))
+        value: str = self.getResultAt(index)
+        index+=1
+        while self.isResultValid(value):
+            l_readings.append(float(value))
+            value = self.getResultAt(index)
             index += 1
 
         return l_readings
-        
-    
+
     def getGraphCommand(self, axis: GraphPosition) -> str:
         """
         Get the graph command for displaying the measurement on the specified graph axis.
