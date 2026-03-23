@@ -4,9 +4,6 @@ N-dimensional data arrays with named, typed parameter axes, analogous to the
 MATLAB Dependent class used in K4200 measurement workflows.
 Author: Lucas LE DUDAL
 """
-
-from __future__ import annotations
-
 import numpy as np
 
 

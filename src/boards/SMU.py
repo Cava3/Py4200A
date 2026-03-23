@@ -312,12 +312,14 @@ class SMU(Board):
         # Update measurements
         if self.source_type == SourceType.VOLT:
             self.voltage_measurement.steps = int((self.func_stop - self.func_start)/self.func_step) + 1
+            self.voltage_measurement.order = 0
             self.voltage_measurement.min_value = min(self.func_start, self.func_stop)
             self.voltage_measurement.max_value = max(self.func_start, self.func_stop)
             self.current_measurement.min_value = -abs(self.compliance)
             self.current_measurement.max_value = abs(self.compliance)
         elif self.source_type == SourceType.AMPERE:
             self.current_measurement.steps = int((self.func_stop - self.func_start)/self.func_step) + 1
+            self.current_measurement.order = 0
             self.current_measurement.min_value = min(self.func_start, self.func_stop)
             self.current_measurement.max_value = max(self.func_start, self.func_stop)
             self.voltage_measurement.min_value = -abs(self.compliance)
@@ -365,12 +367,14 @@ class SMU(Board):
         # Update measurements
         if self.source_type == SourceType.VOLT:
             self.voltage_measurement.steps = self.num_steps
+            self.voltage_measurement.order = self._stepper_index
             self.voltage_measurement.min_value = min(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.voltage_measurement.max_value = max(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.current_measurement.min_value = -abs(self.compliance)
             self.current_measurement.max_value = abs(self.compliance)
         elif self.source_type == SourceType.AMPERE:
             self.current_measurement.steps = self.num_steps
+            self.current_measurement.order = self._stepper_index
             self.current_measurement.min_value = min(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.current_measurement.max_value = max(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.voltage_measurement.min_value = -abs(self.compliance)
@@ -436,12 +440,14 @@ class SMU(Board):
         # Update measurements
         if self.source_type == SourceType.VOLT:
             self.voltage_measurement.steps = len(values)
+            self.voltage_measurement.order = 0
             self.voltage_measurement.min_value = min(values)
             self.voltage_measurement.max_value = max(values)
             self.current_measurement.min_value = -abs(self.compliance)
             self.current_measurement.max_value = abs(self.compliance)
         elif self.source_type == SourceType.AMPERE:
             self.current_measurement.steps = len(values)
+            self.current_measurement.order = 0
             self.current_measurement.min_value = min(values)
             self.current_measurement.max_value = max(values)
             self.voltage_measurement.min_value = -abs(self.compliance)

@@ -7,12 +7,14 @@ The class uses the Communications class from the instrcomms module to handle low
 and provides user with high-level OOP to interact with the instrument in a more intuitive way.
 """
 from .results import Display, Measurement
+from .results.BlobDependent import BlobDependent
 from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
 from .consts import Status, BoardType, RPMMode, IntegrationTime
 from pyvisa.resources.gpib import GPIBInstrument
 import time as t
+import numpy as np
 
 class KI4200A:
     """
@@ -248,6 +250,72 @@ class KI4200A:
             return PMU_RPM.of(b)
 
         return b
+
+    def makeDependentFrom(self, data: Measurement, params: list[Measurement]) -> BlobDependent:
+        """
+        Build a :class:`BlobDependent` from a data measurement and a list of parameter measurements.
+
+        Each parameter measurement contributes one axis to the result.  Its
+        ``steps`` attribute defines the length of that axis and its
+        :meth:`~Measurement.getResultSerie` values become the coordinate array.
+        The data measurement is fetched as a flat series and reshaped into the
+        N-D array whose shape is ``(params[0].steps, params[1].steps, …)``.
+
+        Args:
+            data (Measurement): The measurement whose values populate the data
+                array.  Its ``steps`` must equal the product of all parameter
+                ``steps``.
+            params (list[Measurement]): Parameter measurements in any order.
+                They are automatically sorted by ``order`` (Step sources first,
+                in ascending ``stepper_index`` order; Sweep source last) so
+                that the resulting array axes match the actual nesting of loops
+                on the instrument.
+
+        Returns:
+            BlobDependent: The structured N-dimensional result, labelled with
+            the data measurement name.
+
+        Raises:
+            ValueError: If ``data.steps`` does not equal the product of all
+                parameter ``steps``.
+
+        Example:
+            >>> dep = ki.makeDependentFrom(id_measurement, [vg_measurement, vd_measurement])
+        """
+        invalid: list[str] = [
+            p.name for p in params if p.order < 0 or p.steps <= 0
+        ]
+        if invalid:
+            raise ValueError(
+                f"The following measurements are not configured as valid "
+                f"sweep parameters (order < 0 or steps <= 0): {invalid}."
+            )
+
+        # Highest stepper_index first (outermost loop → axis 0),
+        # sweep (order=0) last (innermost loop → last axis).
+        sorted_params: list[Measurement] = sorted(params, key=lambda p: p.order, reverse=True)
+
+        shape: tuple[int, ...] = tuple(p.steps for p in sorted_params)
+        expected_steps: int = 1
+        for s in shape:
+            expected_steps *= s
+
+        if data.steps != expected_steps:
+            raise ValueError(
+                f"data.steps ({data.steps}) must equal the product of all "
+                f"parameter steps ({expected_steps})."
+            )
+
+        raw_data: list[float] = data.getAllResults()
+        parameters: dict[str, np.ndarray] = {
+            p.name: np.array(p.getResultSerie()) for p in sorted_params
+        }
+
+        return BlobDependent(
+            data=np.array(raw_data).reshape(shape),
+            parameters=parameters,
+            label=data.name,
+        )
 
     def __del__(self) -> None:
         """

@@ -14,6 +14,11 @@ class Measurement:
     Attributes:
         name (str): The name of the measurement.
         steps (int): The number of measurement steps.
+        order (int): Sweeping order of this measurement's source axis.  ``-1``
+            means not yet configured (cannot be used as a parameter).  ``0``
+            for a Sweep source (innermost loop); equal to the SMU's
+            ``stepper_index`` for a Step source (outermost loops, in
+            descending order).
         min_value (float): The minimum value for the measurement range or display.
         max_value (float): The maximum value for the measurement range or display.
         is_log_scale (bool): Indicates if the measurement should be handled/displayed in log scale.
@@ -37,6 +42,7 @@ class Measurement:
         self._com: Communications = comm
         self.unit: SourceType = unit
         self.steps: int = steps
+        self.order: int = -1
         self.name = name
         self.min_value = min_value
         self.max_value = max_value
