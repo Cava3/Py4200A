@@ -4,8 +4,8 @@ Author: Lucas LE DUDAL
 
 This module defines the PMU_RPM class, which inherits from the Board class and represents a specific \
 type of board (an PMU_RPM) equipped in the KI4200A. The PMU_RPM class provides methods and attributes\
-specific to PMU_RPMs, such as [].
-""" # TODO:                   ^
+specific to PMU_RPMs.
+"""
 from ..instrcomms import Communications
 from .Board import Board
 from ..consts import Status, BoardType

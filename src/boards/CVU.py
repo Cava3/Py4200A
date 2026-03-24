@@ -10,7 +10,7 @@ from ..instrcomms import Communications
 from .Board import Board
 from ..consts import Status, BoardType
 
-class CVU(Board): # TODO:   v
+class CVU(Board):
     """
     This class represents a Capacitance-Voltage Unit (CVU) board equipped in the Keithley 4200A.
     """
