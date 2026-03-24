@@ -70,19 +70,37 @@ class Measurement:
         return float(value) != 0
 
 
-    def getResultSerie(self) -> list[float]:
+    def getResultSerie(self, precedent_dimensions: list["Measurement"] | None = None) -> list[float]:
         """
-        Fetch exactly the first ``steps`` measurement results from the instrument.
+        Fetch one value per step of this measurement, skipping over repeated inner-loop values.
+
+        In the KXCI buffer, an outer (step) source repeats each of its values once for every
+        point of its inner dimensions. ``precedent_dimensions`` describes those inner measurements
+        so the correct stride can be computed.
+
+        Examples:
+            - Sweep (innermost, no inner dims): ``getResultSerie()`` → first ``steps`` values.
+            - Step with one inner sweep of 20 pts: ``getResultSerie([20])`` → values at buffer indices 1, 152, 303, …
+
+        Args:
+            precedent_dimensions: Measurements whose loops are nested *inside* this one.
+                                  Their ``steps`` are multiplied together to form the stride.
+                                  Defaults to ``None`` (stride = 1).
 
         Returns:
-            list[float]: The list of the first ``steps`` measurement values retrieved from the instrument.
+            list[float]: ``steps`` values, one per unique output level of this measurement.
         """
-        l_readings: list[float] = []
-        for index in range(1, self.steps + 1):
-            value: str = self.getResultAt(index)
-            l_readings.append(float(value))
+        stride: int = 1
+        if precedent_dimensions:
+            for m in precedent_dimensions:
+                stride *= m.steps
 
-        return l_readings
+        results: list[float] = []
+        for i in range(self.steps):
+            results.append(float(self.getResultAt(1 + stride * i)))
+
+        return results
+
 
     def getAllResults(self) -> list[float]:
         """

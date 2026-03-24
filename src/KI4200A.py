@@ -258,19 +258,20 @@ class KI4200A:
         sorted_params: list[Measurement] = sorted(params, key=lambda p: p.order, reverse=True)
 
         shape: tuple[int, ...] = tuple(p.steps for p in sorted_params)
-        expected_steps: int = 1
+        amount_of_data: int = 1
         for s in shape:
-            expected_steps *= s
-
-        if data.steps != expected_steps:
-            raise ValueError(
-                f"data.steps ({data.steps}) must equal the product of all "
-                f"parameter steps ({expected_steps})."
-            )
+            amount_of_data *= s
 
         raw_data: list[float] = data.getAllResults()
+
+        if len(raw_data) != amount_of_data:
+            raise ValueError(
+                f"data length ({len(raw_data)}) must equal the product of all parameter steps ({amount_of_data})."
+            )
+
         parameters: dict[str, np.ndarray] = {
-            p.name: np.array(p.getResultSerie()) for p in sorted_params
+            p.name: np.array(p.getResultSerie(sorted_params[i + 1:] or None))
+            for i, p in enumerate(sorted_params)
         }
 
         return BlobDependent(
@@ -310,6 +311,11 @@ class KI4200A:
 
 
     # === Getters and setters ===
+
+    @property
+    def comms(self) -> Communications:
+        """The underlying Communications object for this instrument."""
+        return self._comms
 
     @property
     def write_termination(self) -> str:
