@@ -6,7 +6,10 @@ This library provides a high-level interface to control and communicate with the
 allowing users to perform measurements, set up test configurations, and retrieve data in a user-friendly manner.
 """
 
-from .src.KI4200A import KI4200A    # type: ignore
-from .src import consts             # type: ignore
-from .src import boards             # type: ignore
-from .src import results            # type: ignore
+from .src.KI4200A import KI4200A
+from .src import consts
+from .src import boards
+from .src import results
+from .src import realtime
+
+__all__ = ["KI4200A", "consts", "boards", "results", "realtime"]

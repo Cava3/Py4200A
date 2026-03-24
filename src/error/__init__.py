@@ -1,2 +1,4 @@
-from .KXCIConsoleError import KXCIConsoleError #type: ignore
-from .KXCILimitationError import KXCILimitationError #type: ignore
+from .KXCIConsoleError import KXCIConsoleError
+from .KXCILimitationError import KXCILimitationError
+
+__all__ = ["KXCIConsoleError", "KXCILimitationError"]
