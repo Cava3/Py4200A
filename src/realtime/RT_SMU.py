@@ -65,7 +65,7 @@ class RT_SMU:
         i_limit: tuple[float, float] = (-1.05, 1.05) if self.hp else (-0.105, 0.105)
         output = min(max(output, -200.0), 200.0)
         compliance = min(max(compliance, i_limit[0]), i_limit[1])
-        self._write(f"DV {self._slot}, {range_code.value}, {output}, {compliance}")
+        self._write(f"DV {self._slot}, {range_code.value}, {output:.5f}, {compliance}")
         self._comm.checkForError()
 
     def setVoltageOutputForVS(self, voltage: float) -> None:
@@ -88,7 +88,7 @@ class RT_SMU:
         Returns:
             float: Measured current in amperes.
         """
-        response = self._comm.query(f"TI {self._slot}")
+        response = self._comm.query(f"TI{self._slot}")
         return parse_value(response)
 
     def measure_voltage(self) -> float:
@@ -98,7 +98,7 @@ class RT_SMU:
         Returns:
             float: Measured voltage in volts.
         """
-        response = self._comm.query(f"TV {self._slot}")
+        response = self._comm.query(f"TV{self._slot}")
         return parse_value(response)
 
     # === Range and calibration ===

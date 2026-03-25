@@ -37,10 +37,9 @@ def parse_value(response: str) -> float:
     """
     Parse a numeric value from a KXCI measurement response.
 
-    KXCI responses have the form ``X YY Z +N.NNNN E±NN`` where X is a status
-    character, YY is the channel, Z is the mode (V/I), and the remainder is the
-    reading in scientific notation. The mantissa and exponent may be separated
-    by a space.
+    KXCI responses have the form ``XYZ ±N.NNNN E±NN`` where X is a status
+    character (N for Normal), YY is the channel, Z is the mode (V/I), and the remainder is the
+    reading in scientific notation. The spaces are inconsistant.
 
     Args:
         response: Raw string returned by the instrument.
@@ -51,10 +50,11 @@ def parse_value(response: str) -> float:
     Raises:
         ValueError: If no numeric value can be extracted.
     """
+    response = response.replace(" ", "")
     try:
         return float(response)
     except:
         try:
-            return float(response.split(" ")[1])
+            return float(response[3:])
         except:
             raise ValueError(f"Cannot parse reading from response: {response!r}")
