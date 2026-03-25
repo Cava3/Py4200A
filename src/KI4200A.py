@@ -121,6 +121,25 @@ class KI4200A:
 
         self.status = Status.READY
 
+    def getSMU(self, slot: int) -> SMU:
+        """
+        Get the RT_SMU instance for the given slot number.
+
+        Args:
+            slot: SMU slot number (1-8).
+
+        Returns:
+            RT_SMU: Real-time SMU controller for that channel.
+
+        Raises:
+            ValueError: If no SMU with that slot was found during scan.
+        """
+        for smu in self.l_smus:
+            if smu.slot == slot:
+                return smu
+        raise ValueError(f"No SMU found at slot {slot}.")
+
+
     def getError(self) -> str:
         """
         Query the instrument for any error messages and return the response.
