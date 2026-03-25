@@ -1,7 +1,8 @@
 # Py4200A
 
-> [!CAUTION]
-> ***This project is under development. The current main branch is working, but all the features are not available yet.***
+> [!NOTE]
+> This project is not complete yet, work in progress.  
+> Basic SMU controlling is already supported, but no pulse mode available (PMU/RPM not existing yet)
 
 py4200A is a python library that provides support for controlling the Keithley Instrument 4200A SCS.  
 The library is object oriented, to make it easy to use. It translates settings to instructions for KXCI.  
@@ -55,10 +56,27 @@ I have yet to confirm if the real requirement would just be to have a DHCP serve
 > In the Keithley's network settings, make sure that the connected network is in "Private" mode and not "Public" mode. In public mode, the Keithley will not accept incoming packets nor pings. You will need admin access though.
 
 ### Code
-In Python, import the lib to use it. Here is an example of code to test if everything is working.
+In Python, import the lib to use it. You can choose to either manually control the device in real time, or pre-programm it to run with settings.  
+Using pre-programmed (normal) mode, performance is way better than realtime manual control. The below examples are doing the exact same gate test on a MOSFET type component :
+- Component : HEF4007UBP
+- Ground : pin 7 (Vss)
+- Gate : pin 6 (G)
+- Source : pin 8 (D)
+
+Results :
+- Normal mode : 101.2s
+- Realtime mode : 408.9s
+
+Normal mode is ~4 times faster for this test.
+
+> [!WARNING]
+> This script must be run with root privilege to be able to access the GPIB0 interface
+
+#### Normal (pre-programmed)
 ```py
 import py4200A
 from py4200A import KI4200A
+import time
 
 #> Connecting to the Keithley
 # INST_RESOURCE_STR = "TCPIP0::192.0.2.0::1225::SOCKET"
@@ -68,9 +86,9 @@ ki4200: KI4200A = KI4200A(INST_RESOURCE_STR)
 ki4200.reset()
 
 #> Getting the SMUs
-source = ki4200.l_smus[2]
-gate = ki4200.l_smus[1]
-unused = ki4200.l_smus[0]
+source = ki4200.getSMU(3)
+gate = ki4200.getSMU(2)
+unused = ki4200.getSMU(1)
 unused.deactivate()
 
 #> Configure the SMUs
@@ -85,9 +103,9 @@ ki4200.display.displayGraph(x=source.voltage_measurement, y1=source.current_meas
 
 #> Run and wait for test
 print("Starting test.")
+t_start = time.time()
 ki4200.runSmuTest()
 ki4200.waitForDataReady()
-print("Done.")
 
 #> Collect results as a BlobDependent
 result: py4200A.results.BlobDependent = ki4200.makeDependentFrom(
@@ -95,18 +113,10 @@ result: py4200A.results.BlobDependent = ki4200.makeDependentFrom(
     params=[source.voltage_measurement, gate.voltage_measurement],
 )
 
-#> Disconnect (while not required, it's good practice)
+print(f"Done. ({time.time() - t_start:.1f}s)")
+
 ki4200.disconnect()
-
 ``` 
-This example code allows to test the gate on a standard MOSFET. After execution, the Keithley should display
-6 curves one above another. Each curve represents a different gate voltage (the step function) from 0 to 5
-(as defined in the program). Each point shows how much current goes through the source depending on the
-source voltage (sweep function).  
-
-> [!WARNING]
-> This script must be run as `sudo` to be able to access the GPIB0 interface
-
 You can display (plot) the graph on your computer by adding these few lines :
 ```py
 import matplotlib
@@ -127,6 +137,63 @@ ax.set_ylabel("Isource (A)")
 ax.legend()
 plt.tight_layout()
 plt.show()
+```
+
+#### Realtime
+```py
+from py4200A import realtime
+import numpy as np
+import time
+
+#> Connecting to the Keithley
+# INST_RESOURCE_STR = "TCPIP0::192.0.2.0::1225::SOCKET"
+INST_RESOURCE_STR = "GPIB0::17::INSTR"
+
+rt: realtime.RT_KI4200A = realtime.RT_KI4200A(INST_RESOURCE_STR)
+
+#> Getting the SMUs
+source = rt.getSMU(3)
+gate   = rt.getSMU(2)
+unused = rt.getSMU(1)
+unused.deactivate()
+rt.userMode()
+
+#> Define sweep ranges
+vgt_values  = np.linspace(0, 5,  6)    # 0, 1, 2, 3, 4, 5 V
+vsrc_values = np.linspace(0, 15, 151)  # 0 to 15 V, step 0.1 V
+results     = np.zeros((len(vgt_values), len(vsrc_values)))
+
+#> Run the sweep
+print("Starting test.")
+t_start = time.time()
+for i, vgt in enumerate(vgt_values):
+    gate.setVoltageOutput(float(vgt), compliance=0.1)
+    for j, vsrc in enumerate(vsrc_values):
+        source.setVoltageOutput(float(vsrc), compliance=0.05)
+        results[i, j] = source.measure_current()
+print(f"Done. ({time.time() - t_start:.1f}s)")
+
+rt.disconnect()
+```
+You can display (plot) the graph on your computer by adding these few lines :
+```py
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
+#> Plot ISRC vs VSRC, one curve per VGT value
+colors: list[str] = ["red", "green", "blue", "magenta", "yellow", "cyan"]
+
+fig, ax = plt.subplots()
+for i, vgt in enumerate(vgt_values):
+    ax.plot(vsrc_values, results[i, :], color=colors[i % len(colors)], label=f"Gate = {vgt:.2f} V")
+
+ax.set_xlabel("Vsource (V)")
+ax.set_ylabel("Isource (A)")
+ax.legend()
+plt.tight_layout()
+plt.show()
+
 ```
 
 ## Roadmap
