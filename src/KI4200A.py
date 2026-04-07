@@ -220,17 +220,16 @@ class KI4200A:
         ready before sending the next command.
         """
         if isinstance(self._comms.instrument_object, GPIBInstrument):
-            # # For GPIB, use the event manager
-            # self._comms.instrument_object.wait_for_srq(timeout=timeout) # Not implemented in PyVisa-py !
-
-            # FIXME: PyVisa-py doesn't implement the wait_for_srq event.
-            # My workaround will be to check if a command that is not available while running times out or works.
-            t_start = 0
-            while t.time() >= t_start + self._comms.timeout/1000:
-                t_start = t.time()
-                self.query("*OPT?")
-
-            self.write(":ERROR:LAST:CLEAR")
+            if self._comms.backend == "@py":
+                # FIXME: PyVisa-py doesn't implement wait_for_srq.
+                # Workaround: poll a command unavailable during execution.
+                t_start = 0
+                while t.time() >= t_start + self._comms.timeout/1000:
+                    t_start = t.time()
+                    self.query("*OPT?")
+                self.write(":ERROR:LAST:CLEAR")
+            else:
+                self._comms.instrument_object.wait_for_srq()
 
         else:
             # For TCPIP, repeated requests until
