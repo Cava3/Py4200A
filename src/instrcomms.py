@@ -158,14 +158,14 @@ class Communications:
 
         return response
 
-    def hasError(self) -> bool:
+    def isErrorMessage(self, error_message: str) -> bool:
         """
         Used to query the instrument for any errors that may have occurred during the last command or query.
 
         Returns:
             (bool): True if an error is present, False if no error is present.
         """
-        return self.query(":ERROR:LAST:GET") not in ("", "\n")
+        return error_message not in ("", "\n")
 
     def getError(self) -> str:
         """
@@ -186,8 +186,8 @@ class Communications:
         """
         Used to check for any errors that may have occurred during the last command or query and raise an exception if an error is present.
         """
-        if self.hasError():
-            error_message = self.getError()
+        error_message = self.getError()
+        if self.isErrorMessage(error_message):
             self.clearError()
             raise KXCIConsoleError(message=error_message)
 
