@@ -221,6 +221,6 @@ good and proper usage of AI tools though. Simply keep your code relevant and rea
 ## See also
 [instrcom.py](./src/instrcomms.py) - Sample file from Tektronix under [a very permissive license](https://www.tek.com/sample-license)  
 [linux-gpib](https://github.com/coolshou/linux-gpib) - GPIB driver I'm using on my Linux (Ubuntu) laptop.  
-[PyVISA](https://pyvisa.readthedocs.io/en/latest/) - Python library to communicate with a device via most interfaces through VISA
-[PyVISA-py](https://pypi.org/project/PyVISA-py/) -  Replaces proprietary VISA libraries with a python implementation
-[USAL](https://usal.es/) - The university that works on this project
+[PyVISA](https://pyvisa.readthedocs.io/en/latest/) - Python library to communicate with a device via most interfaces through VISA  
+[PyVISA-py](https://pypi.org/project/PyVISA-py/) -  Replaces proprietary VISA libraries with a python implementation  
+[USAL](https://usal.es/) - The university that works on this project  
