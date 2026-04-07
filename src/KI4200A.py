@@ -45,7 +45,7 @@ class KI4200A:
         self._l_equipped: list[str]
         self._exit_on_compliance: bool = False
         self._integration_time: IntegrationTime = IntegrationTime.NORMAL
-        self._test_mode: RPMMode = RPMMode.SMU
+        self._test_mode: RPMMode = RPMMode.PMU
         
 
         # Initialization process
@@ -112,10 +112,8 @@ class KI4200A:
         for smu in self.l_smus:
             smu.deactivate()
 
-        rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
         # Reset RPMs
-        for rpm in rpms:
-            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.PMU.value}")
+        self.test_mode = RPMMode.PMU
 
 
         self._comms.checkForError()
@@ -192,30 +190,24 @@ class KI4200A:
         """
         Starts the test sequence on the instrument.
 
-        In SMU mode (default), switches RPMs to SMU and triggers the KXCI sweep engine.
+        In SMU mode, triggers the SMU test via ME.
         In PMU mode, executes the PMU pulse test via :PMU:EXECUTE.
 
         Args:
             clear_buffer (bool): Whether to clear the result buffer before running. Defaults to True.
                                  Only applies to SMU mode.
         """
-        rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
-
-        if self._test_mode == RPMMode.SMU:
-            for rpm in rpms:
-                self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.SMU.value}")
+        if self.test_mode == RPMMode.SMU:
             self.write("MD")
             self.write("ME1" if clear_buffer else "ME3")
-        else:
-            for rpm in rpms:
-                self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {self._test_mode.value}")
+        elif self.test_mode == RPMMode.PMU:
             self.write(":PMU:EXECUTE")
 
     def abortTest(self) -> None:
         """
         Aborts the test sequence on the instrument.
         """
-        if self._test_mode == RPMMode.SMU:
+        if self.test_mode == RPMMode.SMU:
             self.write("MD")
             self.write("ME4")
         else:
