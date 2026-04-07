@@ -45,6 +45,7 @@ class KI4200A:
         self._l_equipped: list[str]
         self._exit_on_compliance: bool = False
         self._integration_time: IntegrationTime = IntegrationTime.NORMAL
+        self._test_mode: RPMMode = RPMMode.SMU
         
 
         # Initialization process
@@ -91,7 +92,7 @@ class KI4200A:
         # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns
         # FIXME: the second one. The first one is also displayed on KCon, so definitely a KXCI issue.
         # FIXME: Can be removed if fixed in more recent versions of KXCI
-        # FIXME: Update : RMP is configurable with commands, so it proves thats just a KXCI response problem.
+        # FIXME: Update : RPM is configurable with commands, so it proves thats just a KXCI response problem.
         if "PMU1RPM1-2" in self._l_equipped and "PMU1RPM1-1" not in self._l_equipped:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
@@ -187,31 +188,38 @@ class KI4200A:
         """
         self.__init__(self._instrument_resource_string)
 
-    def runSmuTest(self, clear_buffer: bool = True) -> None:
+    def runTest(self, clear_buffer: bool = True) -> None:
         """
         Starts the test sequence on the instrument.
 
-        Args: 
-             clearBuffer (bool) : wether to clear the result buffer. Defaults to True
-        """
-        # Switch RPMs to SMU
-        rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
-        for rpm in rpms:
-            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.SMU.value}")
+        In SMU mode (default), switches RPMs to SMU and triggers the KXCI sweep engine.
+        In PMU mode, executes the PMU pulse test via :PMU:EXECUTE.
 
-        # Run the test
-        self.write("MD")
-        if clear_buffer:
-            self.write("ME1")
+        Args:
+            clear_buffer (bool): Whether to clear the result buffer before running. Defaults to True.
+                                 Only applies to SMU mode.
+        """
+        rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
+
+        if self._test_mode == RPMMode.SMU:
+            for rpm in rpms:
+                self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {RPMMode.SMU.value}")
+            self.write("MD")
+            self.write("ME1" if clear_buffer else "ME3")
         else:
-            self.write("ME3")
+            for rpm in rpms:
+                self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {self._test_mode.value}")
+            self.write(":PMU:EXECUTE")
 
     def abortTest(self) -> None:
         """
         Aborts the test sequence on the instrument.
         """
-        self.write("MD")
-        self.write("ME4")
+        if self._test_mode == RPMMode.SMU:
+            self.write("MD")
+            self.write("ME4")
+        else:
+            self.write(":PMU:ABORT")
 
     def waitForDataReady(self) -> None:
         """
@@ -375,4 +383,17 @@ class KI4200A:
         self._integration_time = value
         self.write("US")
         self.write(f"IT {value.value}")
+        self._comms.checkForError()
+
+    @property
+    def test_mode(self) -> RPMMode:
+        """The current RPM mode used when running a test. Defaults to SMU."""
+        return self._test_mode
+
+    @test_mode.setter
+    def test_mode(self, value: RPMMode) -> None:
+        self._test_mode = value
+        rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
+        for rpm in rpms:
+            self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {value.value}")
         self._comms.checkForError()
