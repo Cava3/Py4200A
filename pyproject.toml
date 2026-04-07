@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py4200A"
+version = "0.1.0"
+description = "Python interface for the Keithley 4200A Semiconductor Characterization System"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Lucas LE DUDAL" }]
+requires-python = ">=3.9"
+keywords = ["keithley", "4200A", "SCS", "GPIB", "KXCI", "semiconductor", "instrument", "measurement"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+]
+dependencies = [
+    "pyvisa>=1.11.0",
+    "pyvisa-py>=0.5.0",
+    "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.5.0"]
+
+[project.urls]
+Homepage = "https://github.com/Cava3/PyKI4200A-SCS"
+Repository = "https://github.com/Cava3/PyKI4200A-SCS"
+Issues = "https://github.com/Cava3/PyKI4200A-SCS/issues"
+
+[tool.setuptools]
+packages = [
+    "py4200A",
+    "py4200A.src",
+    "py4200A.src.boards",
+    "py4200A.src.results",
+    "py4200A.src.error",
+    "py4200A.src.realtime",
+]
+
+[tool.setuptools.package-dir]
+"py4200A"              = "."
+"py4200A.src"          = "src"
+"py4200A.src.boards"   = "src/boards"
+"py4200A.src.results"  = "src/results"
+"py4200A.src.error"    = "src/error"
+"py4200A.src.realtime" = "src/realtime"
