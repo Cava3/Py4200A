@@ -29,9 +29,6 @@ dependencies = [
     "numpy>=1.20.0",
 ]
 
-[project.optional-dependencies]
-plot = ["matplotlib>=3.5.0"]
-
 [project.urls]
 Homepage = "https://github.com/Cava3/PyKI4200A-SCS"
 Repository = "https://github.com/Cava3/PyKI4200A-SCS"

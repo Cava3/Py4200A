@@ -10,30 +10,14 @@ Made in collaboration with the USAL (University of SALamanca) in Salamanca, Spai
 
 ## Install
 
-For now, you will have to manually add the code from this git repo to either your project, or to your python lib folder.  
-Better installation instructions/executable will come later.
-
-### Requirements
-- **PyVISA**
-- **PyVISA-py** (mandatory for now, support for @ivi as system default coming soon<sup>tm</sup>)
-- **linux-gpib**
+```bash
+pip install py4200A
+```
 
 > [!IMPORTANT]
 > You will need a GPIB backend if you want to use GPIB. I would recommend doing a proper [linux-gpib](https://github.com/coolshou/linux-gpib)
 > installation beforehand. Make sure your installation of 'linux-gpib' works before opening an issue.
 > You can use the `ibtest` tool installed with 'linux-gpib' to test GPIB connection (run as sudo)
-
-### In your project
-1. Navigate to your project's folder (`cd /path/to/your/project/`);
-2. Download the library using `git clone git@github.com:Cava3/PyKI4200A-SCS.git` or the ZIP download button;
-3. If using ZIP, extract in your project folder. You should see a 'Py4200A' folder appear;
-4. Import the library in your program `import Py4200A` or `from Py4200A import *`
-
-### As a library
-1. Navigate to your python virtual env (or global) lib folder (`cd /path/to/your/python/venv/lib`);
-2. Download the library using `git clone git@github.com:Cava3/PyKI4200A-SCS.git` or the ZIP download button;
-3. If using ZIP, extract in your library folder. You should see a 'Py4200A' folder appear;
-4. Import the library in your program `import Py4200A` or `from Py4200A import *`
 
 ## How to use
 ### KI 4200A Configuration
