@@ -31,12 +31,19 @@ class Communications:
         self._version: float = 1.1
         self.con_type: int = -1 # connection type. -1 = not connected, 0 = TCPIP, 1 = GPIB
 
+        self._backend: str = ""
         try:
-            if self._resource_manager is None:
-                # Try the system (IVI) backend first
-                self._resource_manager = visa.ResourceManager("@py")
-        except visa.VisaIOWarning as visawarning:
-            print(f"{visawarning}")
+            self._resource_manager = visa.ResourceManager()  # system VISA (NI-VISA, Keysight, …)
+            self._backend = "default"
+        except Exception:
+            try:
+                self._resource_manager = visa.ResourceManager("@py")  # pure-Python fallback
+                self._backend = "@py"
+            except Exception as e:
+                raise RuntimeError(
+                    "No VISA backend found. Install NI-VISA (Windows/Mac) "
+                    "or pyvisa-py: pip install py4200A[visa-py]"
+                ) from e
 
     def connect(self, instrument_resource_string: str | None = None, timeout: int | None = None) -> None:
         """

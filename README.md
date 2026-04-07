@@ -9,12 +9,22 @@ The library is object oriented, to make it easy to use. It translates settings t
 Made in collaboration with the USAL (University of SALamanca) in Salamanca, Spain.
 
 ## Install
+The py4200A library is available on PyPi, the main pip package repository. This way, you an simply install it in your python virtual env using :
 
 ```bash
 pip install py4200A
 ```
 
+If you have **NI-VISA** (or another vendor VISA library) already installed on your system, this is all you need.
+
+If you are on **Linux or don't have a vendor VISA** (e.g. using linux-gpib), add the optionnal Python VISA backend:
+
+```bash
+pip install py4200A[visa-py]
+```
+
 > [!IMPORTANT]
+> **Linux users**
 > You will need a GPIB backend if you want to use GPIB. I would recommend doing a proper [linux-gpib](https://github.com/coolshou/linux-gpib)
 > installation beforehand. Make sure your installation of 'linux-gpib' works before opening an issue.
 > You can use the `ibtest` tool installed with 'linux-gpib' to test GPIB connection (run as sudo)
@@ -22,12 +32,13 @@ pip install py4200A
 ## How to use
 ### KI 4200A Configuration
 KXCI takes full controll of the intrument. This means it cannot run alongside other programs like Clarius on the Keithley.
-1. Power on the Keithley 4200A SCS
-2. Close Clarius, or any other software that is open
-3. Open KCon -> KXCI Config
+1. Power on the Keithley 4200A SCS;
+2. Close Clarius, or any other software that is open;
+3. Open KCon -> KXCI Config;
 4. Choose your string delimiter, connection mode (GPIB or TCPIP), GPIB port, etc.
-5. Close KCon
-6. Start KXCI
+5. Make sure the channel numbers are in order and not duplicate;
+6. Close KCon;
+7. Start KXCI.
 
 ### Wiring
 #### GPIB
@@ -189,10 +200,10 @@ plt.show()
 - [x] Allow test execution
 - [x] Basic result retrieval
 - [x] Analysis and plotting
+- [x] Publish on PyPi
 - [ ] PMU RMP commands
-- [ ] Publish on PyPi
 - [ ] Matlab wrapper
-- [ ] Util to export results to CSV, txt, raw binary
+- [ ] Util to export results to CSV, txt, BLOB
 - [ ] Util to save/export and load/import settings profiles
 - [ ] Export to XLSX
 - [ ] Full instruction dictionnary capabilities

@@ -25,9 +25,11 @@ classifiers = [
 ]
 dependencies = [
     "pyvisa>=1.11.0",
-    "pyvisa-py>=0.5.0",
     "numpy>=1.20.0",
 ]
+
+[project.optional-dependencies]
+visa-py = ["pyvisa-py>=0.5.0"]
 
 [project.urls]
 Homepage = "https://github.com/Cava3/PyKI4200A-SCS"
