@@ -11,7 +11,7 @@ from .results.BlobDependent import BlobDependent
 from .instrcomms import Communications
 from .boards.Board import Board
 from .boards import *
-from .consts import Status, BoardType, RPMMode, IntegrationTime
+from .consts import Status, BoardType, RPMMode, IntegrationTime, PMUMeasureMode
 from pyvisa.resources.gpib import GPIBInstrument
 import time as t
 import numpy as np
@@ -46,6 +46,9 @@ class KI4200A:
         self._exit_on_compliance: bool = False
         self._integration_time: IntegrationTime = IntegrationTime.NORMAL
         self._test_mode: RPMMode = RPMMode.PMU
+        self._pmu_measure_mode: PMUMeasureMode = PMUMeasureMode.SPOT_MEAN_DISCRETE
+        self._pmu_burst_count: int = 1
+        self._pmu_sample_rate: int = 200_000_000
         
 
         # Initialization process
@@ -212,6 +215,21 @@ class KI4200A:
             self.write("ME4")
         else:
             self.write(":PMU:ABORT")
+
+    def initPMU(self) -> None:
+        """
+        Initialize the PMU in standard pulse mode.
+
+        Sends ``:PMU:INIT 0``, which resets both channels of the pulse card to
+        their default settings for standard pulse mode, clears the data buffer,
+        and deletes all Segment Arb sequences.
+
+        This must be called before any other PMU configuration command.  To
+        reset *all* cards in the system at once, use :meth:`reset` instead
+        (which sends ``*RST``).
+        """
+        self.write(":PMU:INIT 0")
+        self._comms.checkForError()
 
     def waitForDataReady(self) -> None:
         """
@@ -388,4 +406,75 @@ class KI4200A:
         rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
         for rpm in rpms:
             self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {value.value}")
+        self._comms.checkForError()
+
+    @property
+    def pmu_measure_mode(self) -> PMUMeasureMode:
+        """Measurement mode for all PMU channels, sent via ``:PMU:MEASURE:MODE``.
+
+        Selects what data the PMU captures and returns:
+
+        * ``NONE`` (0) — no measurements.
+        * ``SPOT_MEAN_DISCRETE`` (1) — averaged V/I per pulse (default).
+        * ``WAVEFORM_DISCRETE`` (2) — full time-sampled waveform per pulse.
+        * ``SPOT_MEAN_AVERAGE`` (3) — spot mean averaged across all burst pulses.
+        * ``WAVEFORM_AVERAGE`` (4) — waveform averaged across all burst pulses.
+
+        Setting this property immediately sends the command to the instrument.
+        """
+        return self._pmu_measure_mode
+
+    @pmu_measure_mode.setter
+    def pmu_measure_mode(self, value: PMUMeasureMode) -> None:
+        self._pmu_measure_mode = value
+        self.write(f":PMU:MEASURE:MODE {value.value}")
+        self._comms.checkForError()
+
+    @property
+    def pulse_burst_count(self) -> int:
+        """Total number of pulses output per test across all active PMU channels.
+
+        Used in average and discrete measurement modes:
+
+        * ``SPOT_MEAN_DISCRETE`` — generates *burstCount* data points per channel.
+        * ``WAVEFORM_DISCRETE`` — generates *burstCount × waveform_points* data points.
+        * ``SPOT_MEAN_AVERAGE`` — always generates 1 averaged data point.
+        * ``WAVEFORM_AVERAGE`` — generates *waveform_points* averaged data points.
+
+        Valid range: 1 to 10 000. Default after ``:PMU:INIT``: 1.
+        Sends ``:PMU:PULSE:BURST:COUNT <n>`` to the instrument.
+        """
+        return self._pmu_burst_count
+
+    @pulse_burst_count.setter
+    def pulse_burst_count(self, value: int) -> None:
+        if not (1 <= value <= 10_000):
+            raise ValueError(f"Burst count must be between 1 and 10 000; got {value}.")
+        self._pmu_burst_count = value
+        self.write(f":PMU:PULSE:BURST:COUNT {value}")
+        self._comms.checkForError()
+
+    @property
+    def pmu_sample_rate(self) -> int:
+        """PMU waveform capture sample rate in samples per second.
+
+        Valid range: 1 000 to 200 000 000 Sa/s (1 kSa/s to 200 MSa/s).
+        The value is sent as an integer.
+        Default after ``:PMU:INIT``: 200 MSa/s.
+
+        The instrument may silently adjust the rate if it would produce more than
+        65\ 536 data points, or if it is slower than required by the shortest
+        measurement interval.
+        Sends ``:PMU:SAMPLE:RATE <rate>`` to the instrument.
+        """
+        return self._pmu_sample_rate
+
+    @pmu_sample_rate.setter
+    def pmu_sample_rate(self, value: int) -> None:
+        if not (1_000 <= value <= 200_000_000):
+            raise ValueError(
+                f"Sample rate must be between 1 000 and 200 000 000 Sa/s; got {value}."
+            )
+        self._pmu_sample_rate = value
+        self.write(f":PMU:SAMPLE:RATE {value}")
         self._comms.checkForError()

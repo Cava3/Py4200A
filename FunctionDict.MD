@@ -54,26 +54,26 @@
 
 ## Standard PMU commands
 
-- [x] `:PMU:RPM:CONFIGURE` - Configure RPM mode (SMU, CVU, etc.)
-- [ ] `:PMU:ABORT` - Abort the current PMU test
-- [ ] `:PMU:CONNECTION:COMP` - Set PMU connection and compliance
-- [ ] `:PMU:DATA:COUNT?` - Query the number of data points available
-- [ ] `:PMU:DATA:GET` - Get measurement data from the PMU
-- [ ] `:PMU:EXECUTE` - Execute a configured PMU test
-- [ ] `:PMU:INIT` - Initialize the PMU
-- [ ] `:PMU:LLEC:CONFIGURE` - Configure long-lead effect compensation (LLEC)
-- [ ] `:PMU:LOAD` - Set load impedance
-- [ ] `:PMU:MEASURE:CONNECTION:COMP` - Set measurement connection and compliance
-- [ ] `:PMU:MEASURE:MODE` - Set measurement mode (voltage, current, etc.)
-- [ ] `:PMU:MEASURE:PIV` - Configure post-pulse I-V measurement
+- [x] `:PMU:ABORT` - Abort the current PMU test
+- [ ] `:PMU:CONNECTION:COMP` - Set PMU connection compensation
+- [x] `:PMU:DATA:COUNT?` - Query the number of data points available
+- [x] `:PMU:DATA:GET` - Get measurement data from the PMU
+- [x] `:PMU:EXECUTE` - Execute a configured PMU test
+- [x] `:PMU:INIT` - Initialize the PMU
+- [x] `:PMU:LLEC:CONFIGURE` - Configure load-line effect compensation (LLEC)
+- [x] `:PMU:LOAD` - Set device real impedance
+- [ ] `:PMU:MEASURE:CONNECTION:COMP` - Set current connexion compensation
+- [x] `:PMU:MEASURE:MODE` - Set measurement mode (discrete / average, waveforme / spot)
+- [x] `:PMU:MEASURE:PIV` - Set what measurements to save for a channel in pulse IV mode.
 - [ ] `:PMU:MEASURE:RANGE` - Set measurement range
-- [ ] `:PMU:OUTPUT:STATE` - Enable or disable PMU output
-- [ ] `:PMU:PULSE:BURST:COUNT` - Set number of pulses in a burst
-- [ ] `:PMU:PULSE:TIMES` - Set pulse timing (period, width, rise, fall, delay)
-- [ ] `:PMU:PULSE:TRAIN` - Configure a pulse train waveform
-- [ ] `:PMU:RETAIN:CONFIG` - Retain or clear configuration after test
-- [ ] `:PMU:SAMPLE:RATE` - Set the waveform sample rate
-- [ ] `:PMU:SOURCE:RANGE` - Set the source voltage/current range
+- [x] `:PMU:OUTPUT:STATE` - Enable or disable PMU output
+- [x] `:PMU:PULSE:BURST:COUNT` - Set number of pulses in a burst
+- [x] `:PMU:PULSE:TIMES` - Set pulse timing (period, width, rise, fall, delay)
+- [x] `:PMU:PULSE:TRAIN` - Sets base and aplitude voltage for a "constant" pulse
+- [x] `:PMU:RETAIN:CONFIG` - Retain or clear configuration after test
+- [x] `:PMU:RPM:CONFIGURE` - Configure RPM mode (SMU, CVU, etc.)
+- [x] `:PMU:SAMPLE:RATE` - Set the waveform sample rate
+- [ ] `:PMU:SOURCE:RANGE` - Set the source voltage range
 - [ ] `:PMU:STEP:DC` - Configure a DC step sweep
 - [ ] `:PMU:STEP:PULSE:AMPLITUDE` - Configure pulse amplitude step sweep
 - [ ] `:PMU:STEP:PULSE:BASE` - Configure pulse base step sweep
