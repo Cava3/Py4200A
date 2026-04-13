@@ -73,16 +73,16 @@
 - [x] `:PMU:RETAIN:CONFIG` - Retain or clear configuration after test
 - [x] `:PMU:RPM:CONFIGURE` - Configure RPM mode (SMU, CVU, etc.)
 - [x] `:PMU:SAMPLE:RATE` - Set the waveform sample rate
-- [ ] `:PMU:SOURCE:RANGE` - Set the source voltage range
-- [ ] `:PMU:STEP:DC` - Configure a DC step sweep
-- [ ] `:PMU:STEP:PULSE:AMPLITUDE` - Configure pulse amplitude step sweep
-- [ ] `:PMU:STEP:PULSE:BASE` - Configure pulse base step sweep
-- [ ] `:PMU:SWEEP:DC` - Configure a DC sweep
-- [ ] `:PMU:SWEEP:PULSE:AMPLITUDE` - Configure pulse amplitude sweep
-- [ ] `:PMU:SWEEP:PULSE:BASE` - Configure pulse base sweep
-- [ ] `:PMU:TEST:STATUS?` - Query current test status
-- [ ] `:PMU:TIMES:PIV` - Set timing for post-pulse I-V measurement
-- [ ] `:PMU:TIMES:WAVEFORM` - Set waveform timing parameters
+- [x] `:PMU:SOURCE:RANGE` - Set the source voltage range
+- [x] `:PMU:STEP:DC` - Configure a DC step sweep
+- [x] `:PMU:STEP:PULSE:AMPLITUDE` - Configure pulse amplitude step sweep
+- [x] `:PMU:STEP:PULSE:BASE` - Configure pulse base step sweep
+- [x] `:PMU:SWEEP:DC` - Configure a DC sweep
+- [x] `:PMU:SWEEP:PULSE:AMPLITUDE` - Configure pulse amplitude sweep
+- [x] `:PMU:SWEEP:PULSE:BASE` - Configure pulse base sweep
+- [x] `:PMU:TEST:STATUS?` - Query current test status
+- [ ] `:PMU:TIMES:PIV` - Set the mean measurement window in PIV mode
+- [ ] `:PMU:TIMES:WAVEFORM` - Set predata and postdata measurement window in waveform mode
 
 ## Segment Arb commands
 

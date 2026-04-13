@@ -149,3 +149,30 @@ class PMURequestedValue(Enum):
     IL = "IL"
     TL = "TL"
     SL = "SL"
+
+class PMUSourceRange(Enum):
+    """Voltage source range for a PMU channel, set via ``:PMU:SOURCE:RANGE``.
+
+    Attributes:
+        V10: 10 V range (low-voltage). Default after ``:PMU:INIT``.
+        V40: 40 V range (high-voltage).
+    """
+    V10 = 10
+    V40 = 40
+
+class PMUPulseMode(Enum):
+    """Selects the step/sweep variant for :meth:`PMU_RPM.setPulseStep` and
+    :meth:`PMU_RPM.setPulseSweep`.
+
+    Attributes:
+        AMPLITUDE: Step or sweep the pulse amplitude with a fixed base voltage.
+            Maps to ``:PMU:STEP:PULSE:AMPLITUDE`` / ``:PMU:SWEEP:PULSE:AMPLITUDE``.
+        BASE: Step or sweep the pulse base voltage with a fixed amplitude.
+            Maps to ``:PMU:STEP:PULSE:BASE`` / ``:PMU:SWEEP:PULSE:BASE``.
+        DC: Step or sweep a DC voltage level (no pulse; requires a sweep on
+            another channel).
+            Maps to ``:PMU:STEP:DC`` / ``:PMU:SWEEP:DC``.
+    """
+    AMPLITUDE = 1
+    BASE      = 2
+    DC        = 3

@@ -41,7 +41,7 @@ class KI4200A:
         self.all_measurements: list[Measurement] # List of all measurements configured on the instrument
         
         #Private
-        self._comms: Communications
+        self._comm: Communications
         self._l_equipped: list[str]
         self._exit_on_compliance: bool = False
         self._integration_time: IntegrationTime = IntegrationTime.NORMAL
@@ -53,12 +53,12 @@ class KI4200A:
 
         # Initialization process
         self.status = Status.INITIALIZING
-        self._comms = Communications(instrument_resource_string)
+        self._comm = Communications(instrument_resource_string)
         self._instrument_resource_string = instrument_resource_string
 
         self.status = Status.CONNECTING
-        self._comms.connect()
-        self.display = Display(self._comms)
+        self._comm.connect()
+        self.display = Display(self._comm)
 
         self.status = Status.CONFIGURING
         self.write_termination = "\0"
@@ -90,7 +90,7 @@ class KI4200A:
         self.id["Brand"], self.id["Model"], self.id["Serial Number"], self.id["Software Version"] = idn[:4]
 
         self._l_equipped = self.query("*OPT?").split(",")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
         # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns
         # FIXME: the second one. The first one is also displayed on KCon, so definitely a KXCI issue.
@@ -100,7 +100,7 @@ class KI4200A:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
         # List and convert the boards
-        l_boards: list[Board] = [Board(name=board_name, comm=self._comms) for board_name in self._l_equipped]
+        l_boards: list[Board] = [Board(name=board_name, comm=self._comm) for board_name in self._l_equipped]
         self.l_equipment = [self._typeBoard(board) for board in l_boards]
         
 
@@ -119,7 +119,7 @@ class KI4200A:
         self.test_mode = RPMMode.PMU
 
 
-        self._comms.checkForError()
+        self._comm.checkForError()
 
         self.status = Status.READY
 
@@ -158,8 +158,8 @@ class KI4200A:
         Only for GPIB, as TCPIP always return a value, or "ACK".  
         For TCPIP, redirects to `query`
         """
-        if self._comms.con_type == 1:
-            self._comms.write(command)
+        if self._comm.con_type == 1:
+            self._comm.write(command)
         else :
             self.query(command)
 
@@ -173,14 +173,14 @@ class KI4200A:
         Returns:
             str: The response from the instrument.
         """
-        return self._comms.query(command)
+        return self._comm.query(command)
 
 
     def disconnect(self) -> None:
         """
         Disconnect from the instrument and release any resources.
         """
-        self._comms.disconnect()
+        self._comm.disconnect()
         self.status = Status.DISCONNECTED
 
     def reconnect(self) -> None:
@@ -229,32 +229,68 @@ class KI4200A:
         (which sends ``*RST``).
         """
         self.write(":PMU:INIT 0")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
-    def waitForDataReady(self) -> None:
-        """
-        Wait until the instrument has completed its current operation and is ready for the next command.
-        This can be used after issuing a command that takes time to execute, to ensure that the instrument is\
-        ready before sending the next command.
-        """
-        if isinstance(self._comms.instrument_object, GPIBInstrument):
-            if self._comms.backend == "@py":
-                # FIXME: PyVisa-py doesn't implement wait_for_srq.
-                # Workaround: poll a command unavailable during execution.
-                t_start = 0
-                while t.time() >= t_start + self._comms.timeout/1000:
-                    t_start = t.time()
-                    self.query("*OPT?")
-                self.write(":ERROR:LAST:CLEAR")
-            else:
-                self._comms.instrument_object.wait_for_srq()
+    def isTestRunning(self) -> bool:
+        """Return ``True`` if a test is currently executing on the instrument.
 
-        else:
-            # For TCPIP, repeated requests until
-            while True:
-                response: str = self.query("SP")
-                if response.isnumeric() and int(response) in [0, 1]:
-                    break
+        This method always uses polling and never blocks.  It is safe to call
+        from any thread and for any connection type or PyVISA backend.
+
+        * **PMU mode**: queries ``:PMU:TEST:STATUS?``; the instrument returns
+          ``1`` while a pulse test is running and ``0`` when idle.
+        * **SMU mode / GPIB**: sends ``*OPT?``; the instrument does not respond
+          while a test is in progress, so a successful reply within the timeout
+          window means the test has finished (``False``).  A timeout exception
+          is caught and treated as still running (``True``).
+        * **SMU mode / TCPIP**: sends ``SP``; returns ``True`` unless the
+          response is the numeric status code ``0`` or ``1`` (idle).
+
+        Returns:
+            bool: ``True`` if a test is running, ``False`` if idle.
+        """
+        # PMU
+        if self._test_mode == RPMMode.PMU:
+            response: str = self.query(":PMU:TEST:STATUS?").strip()
+            return response == "1"
+
+        # SMU / GPIB
+        if isinstance(self._comm.instrument_object, GPIBInstrument):
+            try:
+                self.query("*OPT?")
+                # A successful reply means the instrument is idle.
+                return False
+            except Exception:
+                # Timeout or VISA error while a test is running.
+                return True
+
+        # SMU / TCPIP
+        response = self.query("SP").strip()
+        return not (response.isnumeric() and int(response) in [0, 1])
+
+    def waitForTestEnd(self) -> None:
+        """Block until the instrument has finished its current test.
+
+        * **GPIB with native (non-@py) backend**: uses the hardware SRQ line
+          via ``wait_for_srq()`` — the most efficient and reliable method.
+        * **All other cases** (PyVISA-py GPIB, TCPIP): polls
+          :meth:`isTestRunning` in a tight loop until it returns ``False``.
+          After the SMU GPIB @py poll exits, the error buffer is cleared.
+        """
+        if (
+            isinstance(self._comm.instrument_object, GPIBInstrument)
+            and self._comm.backend != "@py"
+        ):
+            self._comm.instrument_object.wait_for_srq()
+            return
+
+        while self.isTestRunning():
+            pass
+
+        # Clear the error latch left by the PyVISA-py *OPT? workaround.
+        if isinstance(self._comm.instrument_object, GPIBInstrument):
+            self.write(":ERROR:LAST:CLEAR")
+
 
     def makeDependentFrom(self, data: Measurement, params: list[Measurement]) -> BlobDependent:
         """
@@ -351,25 +387,25 @@ class KI4200A:
     @property
     def comms(self) -> Communications:
         """The underlying Communications object for this instrument."""
-        return self._comms
+        return self._comm
 
     @property
     def write_termination(self) -> str:
         """The termination character(s) appended to every command written to the instrument."""
-        return self._comms.write_termination
+        return self._comm.write_termination
 
     @write_termination.setter
     def write_termination(self, value: str) -> None:
-        self._comms.write_termination = value
+        self._comm.write_termination = value
 
     @property
     def read_termination(self) -> str:
         """The termination character(s) expected at the end of every response from the instrument."""
-        return self._comms.read_termination
+        return self._comm.read_termination
 
     @read_termination.setter
     def read_termination(self, value: str) -> None:
-        self._comms.read_termination = value
+        self._comm.read_termination = value
 
     @property
     def exit_on_compliance(self) -> bool:
@@ -381,7 +417,7 @@ class KI4200A:
         self._exit_on_compliance = value
         self.write("US")
         self.write(f"EC {int(value)}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def integration_time(self) -> IntegrationTime:
@@ -393,7 +429,7 @@ class KI4200A:
         self._integration_time = value
         self.write("US")
         self.write(f"IT {value.value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def test_mode(self) -> RPMMode:
@@ -406,7 +442,7 @@ class KI4200A:
         rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
         for rpm in rpms:
             self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {value.value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def pmu_measure_mode(self) -> PMUMeasureMode:
@@ -428,7 +464,7 @@ class KI4200A:
     def pmu_measure_mode(self, value: PMUMeasureMode) -> None:
         self._pmu_measure_mode = value
         self.write(f":PMU:MEASURE:MODE {value.value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def pulse_burst_count(self) -> int:
@@ -452,7 +488,7 @@ class KI4200A:
             raise ValueError(f"Burst count must be between 1 and 10 000; got {value}.")
         self._pmu_burst_count = value
         self.write(f":PMU:PULSE:BURST:COUNT {value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def pmu_sample_rate(self) -> int:
@@ -463,7 +499,7 @@ class KI4200A:
         Default after ``:PMU:INIT``: 200 MSa/s.
 
         The instrument may silently adjust the rate if it would produce more than
-        65\ 536 data points, or if it is slower than required by the shortest
+        65 536 data points, or if it is slower than required by the shortest
         measurement interval.
         Sends ``:PMU:SAMPLE:RATE <rate>`` to the instrument.
         """
@@ -477,4 +513,4 @@ class KI4200A:
             )
         self._pmu_sample_rate = value
         self.write(f":PMU:SAMPLE:RATE {value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
