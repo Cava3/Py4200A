@@ -36,7 +36,8 @@ class KI4200A:
         self.id: dict[str, str]
         self.status: Status             # KI4200A's current task or state
         self.l_equipment: list[Board]   # List of board objects equipped in the instrument
-        self.l_smus: list[SMU]          # List of SMU boards equipped in the instrument in slot order
+        self.l_smus: list[SMU]          # List of SMU boards equipped in the instrument by slot order
+        self.l_rpms: list[PMU_RPM]      # List of RPM boards equipped in the instrument by slot order
         self.display: Display           # Display controller for managing the instrument's display
         self.all_measurements: list[Measurement] # List of all measurements configured on the instrument
         
@@ -74,8 +75,13 @@ class KI4200A:
         }
         self.scan()
         self.all_measurements = [measurement for board in self.l_equipment for measurement in board.measurements]
+
         self.l_smus = [board for board in self.l_equipment if board.board_type == BoardType.SMU and isinstance(board, SMU)]
         self.l_smus.sort(key=lambda smu: smu.slot)
+
+        self.l_rpms = [board for board in self.l_equipment if board.board_type == BoardType.PMU_RPM and isinstance(board, PMU_RPM)]
+        self.l_rpms.sort(key=lambda rpm: rpm.slot)
+
 
         self.status = Status.READY_NOT_RESET
 
@@ -125,13 +131,13 @@ class KI4200A:
 
     def getSMU(self, slot: int) -> SMU:
         """
-        Get the RT_SMU instance for the given slot number.
+        Get the SMU instance for the given slot number.
 
         Args:
             slot: SMU slot number (1-8).
 
         Returns:
-            RT_SMU: Real-time SMU controller for that channel.
+            SMU: SMU controller for that channel.
 
         Raises:
             ValueError: If no SMU with that slot was found during scan.
@@ -141,6 +147,24 @@ class KI4200A:
                 return smu
         raise ValueError(f"No SMU found at slot {slot}.")
 
+    
+    def getRPM(self, slot: int) -> PMU_RPM:
+        """
+        Get the PMU_RPM instance for the given slot number.
+
+        Args:
+            slot: RPM slot number (RPM 1-2 = slot 12, etc.).
+
+        Returns:
+            RPM: RPM controller for that channel.
+
+        Raises:
+            ValueError: If no RPM with that slot was found during scan. 
+        """
+        for rpm in self.l_rpms:
+            if rpm.slot == slot:
+                return rpm
+        raise ValueError(f"No RPM found at slot {slot}. \nExample : slot number for PMU1-RPM1-2 is 12")
 
     def getError(self) -> str:
         """
@@ -213,7 +237,7 @@ class KI4200A:
         if self.test_mode == RPMMode.SMU:
             self.write("MD")
             self.write("ME4")
-        else:
+        elif self.test_mode == RPMMode.PMU:
             self.write(":PMU:ABORT")
 
     def initPMU(self) -> None:
@@ -256,20 +280,17 @@ class KI4200A:
 
         # SMU / GPIB
         if isinstance(self._comm.instrument_object, GPIBInstrument):
-            try:
-                self.query("*OPT?")
-                # A successful reply means the instrument is idle.
-                return False
-            except Exception:
-                # Timeout or VISA error while a test is running.
-                return True
+            start_time = t.time()
+            self.query("*OPT?")
+            return t.time() - start_time > 5
 
         # SMU / TCPIP
         response = self.query("SP").strip()
         return not (response.isnumeric() and int(response) in [0, 1])
 
     def waitForTestEnd(self) -> None:
-        """Block until the instrument has finished its current test.
+        """
+        Blocks until the instrument has finished its current test.
 
         * **GPIB with native (non-@py) backend**: uses the hardware SRQ line
           via ``wait_for_srq()`` — the most efficient and reliable method.

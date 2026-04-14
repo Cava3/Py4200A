@@ -21,6 +21,7 @@ class PMU_RPM(Board):
         type (BoardType): The type of the board, set to BoardType.PMU_RPM
 
     """
+    stepper_index: int = 0
 
     def __init__(self, name: str, comm: Communications) -> None:
         """
@@ -39,6 +40,17 @@ class PMU_RPM(Board):
 
         s_slot = name[-3] + name[-1]
         self._slot = int(s_slot) if s_slot.isnumeric() else 0
+
+        # Measurements definition
+        from ..results import Measurement
+        from ..consts import MeasurementType, SourceType
+        self.vh_measurement = Measurement(comm, f"VH{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.VOLT, pmu_offset=0)
+        self.ih_measurement = Measurement(comm, f"IH{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.AMPERE, pmu_offset=1)
+        self.vl_measurement = Measurement(comm, f"VL{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.VOLT, pmu_offset=4)
+        self.il_measurement = Measurement(comm, f"IL{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.AMPERE, pmu_offset=5)
+
+        self.measurements: list[Measurement] = [self.vh_measurement, self.ih_measurement, self.vl_measurement, self.il_measurement]
+        self._stepper_index: int = 0
 
         # Cached backing values for properties (hardware defaults after :PMU:INIT)
         self._output_state: bool = False
@@ -220,6 +232,159 @@ class PMU_RPM(Board):
         self._comm.write(f":PMU:PULSE:TRAIN {self._channel}, {vbase:g}, {vamplitude:g}")
         self._comm.checkForError()
 
+    def setPulseStep(
+        self,
+        mode: PMUPulseMode,
+        start: float,
+        stop: float,
+        step: float,
+        constant_v: float | None = None,
+    ) -> None:
+        """Configure the voltage step pattern for this channel.
+
+        Dispatches to one of three SCPI commands depending on *mode*:
+
+        * ``AMPLITUDE`` — ``:PMU:STEP:PULSE:AMPLITUDE <ch>, start, stop, step, vbase``
+          Steps the pulse high level; *constant_v* sets the fixed base voltage.
+        * ``BASE`` — ``:PMU:STEP:PULSE:BASE <ch>, start, stop, step, vamplitude``
+          Steps the pulse low level; *constant_v* sets the fixed amplitude.
+        * ``DC`` — ``:PMU:STEP:DC <ch>, start, stop, step``
+          Steps a DC voltage level; *constant_v* is not used.
+
+        For ``AMPLITUDE`` and ``BASE`` modes a sweep must be configured on
+        another PMU channel before this command is sent.  Voltage bounds are
+        validated by the instrument at ``:PMU:EXECUTE`` time and reported via
+        ``checkForError``.
+
+        Args:
+            mode (PMUPulseMode): Which step variant to use.
+            start (float): Initial step voltage in volts.
+            stop (float): Final step voltage in volts.
+            step (float): Step size in volts; must not be 0.
+            constant_v (float | None): Fixed base voltage (AMPLITUDE mode) or
+                fixed amplitude (BASE mode).  Not used for DC mode.
+
+        Raises:
+            ValueError: If *step* is 0, or if *constant_v* is required but not
+                provided.
+        """
+        if step == 0:
+            raise ValueError("step must not be 0.")
+        if mode != PMUPulseMode.DC and constant_v is None:
+            raise ValueError(
+                f"constant_v is required for mode {mode.value} "
+                f"(it is the fixed {'base' if mode == PMUPulseMode.AMPLITUDE else 'amplitude'} voltage)."
+            )
+
+        if mode == PMUPulseMode.DC:
+            self._comm.write(f":PMU:STEP:DC {self._channel}, {start:g}, {stop:g}, {step:g}")
+        elif mode == PMUPulseMode.AMPLITUDE:
+            self._comm.write(
+                f":PMU:STEP:PULSE:AMPLITUDE {self._channel}, {start:g}, {stop:g}, {step:g}, {constant_v:g}"
+            )
+        else:  # BASE
+            self._comm.write(
+                f":PMU:STEP:PULSE:BASE {self._channel}, {start:g}, {stop:g}, {step:g}, {constant_v:g}"
+            )
+        self._comm.checkForError()
+
+        # Update shape
+        PMU_RPM.stepper_index += 1
+        self._stepper_index = PMU_RPM.stepper_index
+
+        num_steps = int(abs(stop - start) / step) + 1
+        for measurement in self.measurements:
+            measurement.steps = num_steps
+            measurement.order = self._stepper_index
+            if mode == PMUPulseMode.AMPLITUDE and measurement in [self.vh_measurement]:
+                measurement.min_value = min(start, stop)
+                measurement.max_value = max(start, stop)
+            elif mode == PMUPulseMode.BASE and measurement in [self.vl_measurement]:
+                measurement.min_value = min(start, stop)
+                measurement.max_value = max(start, stop)
+            elif mode == PMUPulseMode.DC and measurement in [self.vh_measurement, self.vl_measurement]:
+                measurement.min_value = min(start, stop)
+                measurement.max_value = max(start, stop)
+
+    def setPulseSweep(
+        self,
+        mode: PMUPulseMode,
+        start: float,
+        stop: float,
+        step: float,
+        dual_sweep: bool = False,
+        constant_v: float | None = None,
+    ) -> None:
+        """Configure the voltage sweep pattern for this channel.
+
+        Dispatches to one of three SCPI commands depending on *mode*:
+
+        * ``AMPLITUDE`` — ``:PMU:SWEEP:PULSE:AMPLITUDE <ch>, start, stop, step, vbase, dualSweep``
+          Sweeps the pulse high level; *constant_v* sets the fixed base voltage.
+        * ``BASE`` — ``:PMU:SWEEP:PULSE:BASE <ch>, start, stop, step, vamplitude, dualSweep``
+          Sweeps the pulse low level; *constant_v* sets the fixed amplitude.
+        * ``DC`` — ``:PMU:SWEEP:DC <ch>, start, stop, step, dualSweep``
+          Sweeps a DC voltage level; *constant_v* is not used.
+
+        When *dual_sweep* is ``True`` the instrument sweeps start→stop then
+        stop→start.  If sweeping multiple channels, all must have the same
+        number of steps.  Voltage bounds are validated at ``:PMU:EXECUTE`` time.
+
+        Args:
+            mode (PMUPulseMode): Which sweep variant to use.
+            start (float): Initial sweep voltage in volts.
+            stop (float): Final sweep voltage in volts.
+            step (float): Step size in volts; must not be 0.
+            dual_sweep (bool): ``True`` to enable dual (return) sweep.
+                Defaults to ``False``.
+            constant_v (float | None): Fixed base voltage (AMPLITUDE mode) or
+                fixed amplitude (BASE mode).  Not used for DC mode.
+
+        Raises:
+            ValueError: If *step* is 0, or if *constant_v* is required but not
+                provided.
+        """
+        if step == 0:
+            raise ValueError("step must not be 0.")
+        if mode != PMUPulseMode.DC and constant_v is None:
+            raise ValueError(
+                f"constant_v is required for mode {mode.value} "
+                f"(it is the fixed {'base' if mode == PMUPulseMode.AMPLITUDE else 'amplitude'} voltage)."
+            )
+
+        ds = int(dual_sweep)
+        if mode == PMUPulseMode.DC:
+            self._comm.write(
+                f":PMU:SWEEP:DC {self._channel}, {start:g}, {stop:g}, {step:g}, {ds}"
+            )
+        elif mode == PMUPulseMode.AMPLITUDE:
+            self._comm.write(
+                f":PMU:SWEEP:PULSE:AMPLITUDE {self._channel}, {start:g}, {stop:g}, {step:g}, {constant_v:g}, {ds}"
+            )
+        else:  # BASE
+            self._comm.write(
+                f":PMU:SWEEP:PULSE:BASE {self._channel}, {start:g}, {stop:g}, {step:g}, {constant_v:g}, {ds}"
+            )
+        self._comm.checkForError()
+
+        # Update shape
+        num_steps = int(abs(stop - start) / step) + 1
+        if dual_sweep:
+            num_steps = num_steps * 2 - 1
+
+        for meas in self.measurements:
+            meas.steps = num_steps
+            meas.order = 0
+            if mode == PMUPulseMode.AMPLITUDE and meas in [self.vh_measurement]:
+                meas.min_value = min(start, stop)
+                meas.max_value = max(start, stop)
+            elif mode == PMUPulseMode.BASE and meas in [self.vl_measurement]:
+                meas.min_value = min(start, stop)
+                meas.max_value = max(start, stop)
+            elif mode == PMUPulseMode.DC and meas in [self.vh_measurement, self.vl_measurement]:
+                meas.min_value = min(start, stop)
+                meas.max_value = max(start, stop)
+
     # === Getters and setters ===
 
     @property
@@ -327,121 +492,4 @@ class PMU_RPM(Board):
     def source_range(self, value: PMUSourceRange) -> None:
         self._source_range = value
         self._comm.write(f":PMU:SOURCE:RANGE {self._channel}, {value.value}")
-        self._comm.checkForError()
-
-    def setPulseStep(
-        self,
-        mode: PMUPulseMode,
-        start: float,
-        stop: float,
-        step: float,
-        constant_v: float | None = None,
-    ) -> None:
-        """Configure the voltage step pattern for this channel.
-
-        Dispatches to one of three SCPI commands depending on *mode*:
-
-        * ``AMPLITUDE`` — ``:PMU:STEP:PULSE:AMPLITUDE <ch>, start, stop, step, vbase``
-          Steps the pulse high level; *constant_v* sets the fixed base voltage.
-        * ``BASE`` — ``:PMU:STEP:PULSE:BASE <ch>, start, stop, step, vamplitude``
-          Steps the pulse low level; *constant_v* sets the fixed amplitude.
-        * ``DC`` — ``:PMU:STEP:DC <ch>, start, stop, step``
-          Steps a DC voltage level; *constant_v* is not used.
-
-        For ``AMPLITUDE`` and ``BASE`` modes a sweep must be configured on
-        another PMU channel before this command is sent.  Voltage bounds are
-        validated by the instrument at ``:PMU:EXECUTE`` time and reported via
-        ``checkForError``.
-
-        Args:
-            mode (PMUPulseMode): Which step variant to use.
-            start (float): Initial step voltage in volts.
-            stop (float): Final step voltage in volts.
-            step (float): Step size in volts; must not be 0.
-            constant_v (float | None): Fixed base voltage (AMPLITUDE mode) or
-                fixed amplitude (BASE mode).  Not used for DC mode.
-
-        Raises:
-            ValueError: If *step* is 0, or if *constant_v* is required but not
-                provided.
-        """
-        if step == 0:
-            raise ValueError("step must not be 0.")
-        if mode != PMUPulseMode.DC and constant_v is None:
-            raise ValueError(
-                f"constant_v is required for mode {mode.value} "
-                f"(it is the fixed {'base' if mode == PMUPulseMode.AMPLITUDE else 'amplitude'} voltage)."
-            )
-
-        if mode == PMUPulseMode.DC:
-            self._comm.write(f":PMU:STEP:DC {self._channel}, {start:g}, {stop:g}, {step:g}")
-        elif mode == PMUPulseMode.AMPLITUDE:
-            self._comm.write(
-                f":PMU:STEP:PULSE:AMPLITUDE {self._channel}, {start:g}, {stop:g}, {step:g}, {constant_v:g}"
-            )
-        else:  # BASE
-            self._comm.write(
-                f":PMU:STEP:PULSE:BASE {self._channel}, {start:g}, {stop:g}, {step:g}, {constant_v:g}"
-            )
-        self._comm.checkForError()
-
-    def setPulseSweep(
-        self,
-        mode: PMUPulseMode,
-        start: float,
-        stop: float,
-        step: float,
-        dual_sweep: bool = False,
-        constant_v: float | None = None,
-    ) -> None:
-        """Configure the voltage sweep pattern for this channel.
-
-        Dispatches to one of three SCPI commands depending on *mode*:
-
-        * ``AMPLITUDE`` — ``:PMU:SWEEP:PULSE:AMPLITUDE <ch>, start, stop, step, vbase, dualSweep``
-          Sweeps the pulse high level; *constant_v* sets the fixed base voltage.
-        * ``BASE`` — ``:PMU:SWEEP:PULSE:BASE <ch>, start, stop, step, vamplitude, dualSweep``
-          Sweeps the pulse low level; *constant_v* sets the fixed amplitude.
-        * ``DC`` — ``:PMU:SWEEP:DC <ch>, start, stop, step, dualSweep``
-          Sweeps a DC voltage level; *constant_v* is not used.
-
-        When *dual_sweep* is ``True`` the instrument sweeps start→stop then
-        stop→start.  If sweeping multiple channels, all must have the same
-        number of steps.  Voltage bounds are validated at ``:PMU:EXECUTE`` time.
-
-        Args:
-            mode (PMUPulseMode): Which sweep variant to use.
-            start (float): Initial sweep voltage in volts.
-            stop (float): Final sweep voltage in volts.
-            step (float): Step size in volts; must not be 0.
-            dual_sweep (bool): ``True`` to enable dual (return) sweep.
-                Defaults to ``False``.
-            constant_v (float | None): Fixed base voltage (AMPLITUDE mode) or
-                fixed amplitude (BASE mode).  Not used for DC mode.
-
-        Raises:
-            ValueError: If *step* is 0, or if *constant_v* is required but not
-                provided.
-        """
-        if step == 0:
-            raise ValueError("step must not be 0.")
-        if mode != PMUPulseMode.DC and constant_v is None:
-            raise ValueError(
-                f"constant_v is required for mode {mode.value} "
-                f"(it is the fixed {'base' if mode == PMUPulseMode.AMPLITUDE else 'amplitude'} voltage)."
-            )
-
-        ds = int(dual_sweep)
-        if mode == PMUPulseMode.DC:
-            self._comm.write(
-                f":PMU:SWEEP:DC {self._channel}, {start:g}, {stop:g}, {step:g}, {ds}"
-            )
-        elif mode == PMUPulseMode.AMPLITUDE:
-            self._comm.write(
-                f":PMU:SWEEP:PULSE:AMPLITUDE {self._channel}, {start:g}, {stop:g}, {step:g}, {constant_v:g}, {ds}"
-            )
-        else:  # BASE
-            self._comm.write(
-                f":PMU:SWEEP:PULSE:BASE {self._channel}, {start:g}, {stop:g}, {step:g}, {constant_v:g}, {ds}"
-            )
         self._comm.checkForError()
