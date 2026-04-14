@@ -2,7 +2,7 @@
 
 > [!NOTE]
 > This project is not complete yet, work in progress.  
-> Basic SMU controlling is already supported, but no pulse mode available (PMU/RPM not existing yet)
+> Currently supported features : SMU usage, PMU/RPMs usage, result fetching
 
 py4200A is a python library that provides support for controlling the Keithley Instrument 4200A SCS.  
 The library is object oriented, to make it easy to use. It translates settings to instructions for KXCI.  
@@ -201,7 +201,7 @@ plt.show()
 - [x] Basic result retrieval
 - [x] Analysis and plotting
 - [x] Publish on PyPi
-- [ ] PMU RMP commands
+- [x] PMU RMP commands
 - [ ] Matlab wrapper
 - [ ] Util to export results to CSV, txt, BLOB
 - [ ] Util to save/export and load/import settings profiles
