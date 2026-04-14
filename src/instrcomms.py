@@ -35,10 +35,18 @@ class Communications:
         try:
             self._resource_manager = visa.ResourceManager()  # system VISA (NI-VISA, Keysight, …)
             self.backend = "default"
+            
+            # Test if the lib is working
+            t_resource: visa.resources.Resource = self._resource_manager.open_resource(self._instrument_resource_string)
+            t_resource.close()
         except Exception:
             try:
                 self._resource_manager = visa.ResourceManager("@py")  # pure-Python fallback
                 self.backend = "@py"
+
+                # Test if the lib is working
+                t_resource: visa.resources.Resource = self._resource_manager.open_resource(self._instrument_resource_string)
+                t_resource.close()
             except Exception as e:
                 raise RuntimeError(
                     "No VISA backend found. Install NI-VISA (Windows/Mac) "
@@ -94,7 +102,7 @@ class Communications:
             )
             msg = (
                 f"VisaIOError opening '{self._instrument_resource_string}': {visaerr}\n"
-                f"Backend={getattr(self, '_backend', None)}\n"
+                f"Backend={getattr(self, 'backend', None)}\n"
                 f"{hint}"
             )
             raise RuntimeError(msg) from visaerr

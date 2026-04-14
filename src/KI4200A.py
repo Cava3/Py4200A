@@ -33,15 +33,16 @@ class KI4200A:
         """
         # Attributes declaration
         #Public
-        self.id: dict[str, str]
-        self.status: Status             # KI4200A's current task or state
-        self.l_equipment: list[Board]   # List of board objects equipped in the instrument
-        self.l_smus: list[SMU]          # List of SMU boards equipped in the instrument in slot order
-        self.display: Display           # Display controller for managing the instrument's display
-        self.all_measurements: list[Measurement] # List of all measurements configured on the instrument
+        self.id: dict[str, str]                     # ID of the instrument
+        self.status: Status                         # KI4200A's current task or state
+        self.l_equipment: list[Board]               # List of board objects equipped in the instrument
+        self.l_smus: list[SMU]                      # List of SMU boards equipped in the instrument by slot order
+        self.l_rpms: list[PMU_RPM]                  # List of RPM boards equipped in the instrument by slot order
+        self.display: Display                       # Display controller for managing the instrument's display
+        self.all_measurements: list[Measurement]    # List of all measurements configured on the instrument
         
         #Private
-        self._comms: Communications
+        self._comm: Communications
         self._l_equipped: list[str]
         self._exit_on_compliance: bool = False
         self._integration_time: IntegrationTime = IntegrationTime.NORMAL
@@ -53,12 +54,12 @@ class KI4200A:
 
         # Initialization process
         self.status = Status.INITIALIZING
-        self._comms = Communications(instrument_resource_string)
+        self._comm = Communications(instrument_resource_string)
         self._instrument_resource_string = instrument_resource_string
 
         self.status = Status.CONNECTING
-        self._comms.connect()
-        self.display = Display(self._comms)
+        self._comm.connect()
+        self.display = Display(self._comm)
 
         self.status = Status.CONFIGURING
         self.write_termination = "\0"
@@ -74,8 +75,13 @@ class KI4200A:
         }
         self.scan()
         self.all_measurements = [measurement for board in self.l_equipment for measurement in board.measurements]
+
         self.l_smus = [board for board in self.l_equipment if board.board_type == BoardType.SMU and isinstance(board, SMU)]
         self.l_smus.sort(key=lambda smu: smu.slot)
+
+        self.l_rpms = [board for board in self.l_equipment if board.board_type == BoardType.PMU_RPM and isinstance(board, PMU_RPM)]
+        self.l_rpms.sort(key=lambda rpm: rpm.slot)
+
 
         self.status = Status.READY_NOT_RESET
 
@@ -90,7 +96,7 @@ class KI4200A:
         self.id["Brand"], self.id["Model"], self.id["Serial Number"], self.id["Software Version"] = idn[:4]
 
         self._l_equipped = self.query("*OPT?").split(",")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
         # FIXME: There is a bug from KXCI where it doesn't return my RPM1-1 even though it returns
         # FIXME: the second one. The first one is also displayed on KCon, so definitely a KXCI issue.
@@ -100,7 +106,7 @@ class KI4200A:
             self._l_equipped.insert(self._l_equipped.index("PMU1RPM1-2"), "PMU1RPM1-1")
 
         # List and convert the boards
-        l_boards: list[Board] = [Board(name=board_name, comm=self._comms) for board_name in self._l_equipped]
+        l_boards: list[Board] = [Board(name=board_name, comm=self._comm) for board_name in self._l_equipped]
         self.l_equipment = [self._typeBoard(board) for board in l_boards]
         
 
@@ -119,19 +125,19 @@ class KI4200A:
         self.test_mode = RPMMode.PMU
 
 
-        self._comms.checkForError()
+        self._comm.checkForError()
 
         self.status = Status.READY
 
     def getSMU(self, slot: int) -> SMU:
         """
-        Get the RT_SMU instance for the given slot number.
+        Get the SMU instance for the given slot number.
 
         Args:
             slot: SMU slot number (1-8).
 
         Returns:
-            RT_SMU: Real-time SMU controller for that channel.
+            SMU: SMU controller for that channel.
 
         Raises:
             ValueError: If no SMU with that slot was found during scan.
@@ -141,6 +147,24 @@ class KI4200A:
                 return smu
         raise ValueError(f"No SMU found at slot {slot}.")
 
+    
+    def getRPM(self, slot: int) -> PMU_RPM:
+        """
+        Get the PMU_RPM instance for the given slot number.
+
+        Args:
+            slot: RPM slot number (RPM 1-2 = slot 12, etc.).
+
+        Returns:
+            RPM: RPM controller for that channel.
+
+        Raises:
+            ValueError: If no RPM with that slot was found during scan. 
+        """
+        for rpm in self.l_rpms:
+            if rpm.slot == slot:
+                return rpm
+        raise ValueError(f"No RPM found at slot {slot}. \nExample : slot number for PMU1-RPM1-2 is 12")
 
     def getError(self) -> str:
         """
@@ -157,9 +181,12 @@ class KI4200A:
         Send a command to the instrument but doesn't read an answer.  
         Only for GPIB, as TCPIP always return a value, or "ACK".  
         For TCPIP, redirects to `query`
+
+        Args:
+            command (str): The command to send to the instrument.
         """
-        if self._comms.con_type == 1:
-            self._comms.write(command)
+        if self._comm.con_type == 1:
+            self._comm.write(command)
         else :
             self.query(command)
 
@@ -170,17 +197,18 @@ class KI4200A:
 
         Args:
             command (str): The command to send to the instrument.
+
         Returns:
             str: The response from the instrument.
         """
-        return self._comms.query(command)
+        return self._comm.query(command)
 
 
     def disconnect(self) -> None:
         """
-        Disconnect from the instrument and release any resources.
+        Disconnect from the instrument.
         """
-        self._comms.disconnect()
+        self._comm.disconnect()
         self.status = Status.DISCONNECTED
 
     def reconnect(self) -> None:
@@ -191,10 +219,7 @@ class KI4200A:
 
     def runTest(self, clear_buffer: bool = True) -> None:
         """
-        Starts the test sequence on the instrument.
-
-        In SMU mode, triggers the SMU test via ME.
-        In PMU mode, executes the PMU pulse test via :PMU:EXECUTE.
+        Starts the test sequence on the instrument. Test type depends on the set test mode.
 
         Args:
             clear_buffer (bool): Whether to clear the result buffer before running. Defaults to True.
@@ -213,57 +238,62 @@ class KI4200A:
         if self.test_mode == RPMMode.SMU:
             self.write("MD")
             self.write("ME4")
-        else:
+        elif self.test_mode == RPMMode.PMU:
             self.write(":PMU:ABORT")
 
     def initPMU(self) -> None:
         """
         Initialize the PMU in standard pulse mode.
-
-        Sends ``:PMU:INIT 0``, which resets both channels of the pulse card to
-        their default settings for standard pulse mode, clears the data buffer,
-        and deletes all Segment Arb sequences.
-
-        This must be called before any other PMU configuration command.  To
-        reset *all* cards in the system at once, use :meth:`reset` instead
-        (which sends ``*RST``).
+        Must be called before any other PMU configuration.
         """
         self.write(":PMU:INIT 0")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
-    def waitForDataReady(self) -> None:
+    def isTestRunning(self) -> bool:
         """
-        Wait until the instrument has completed its current operation and is ready for the next command.
-        This can be used after issuing a command that takes time to execute, to ensure that the instrument is\
-        ready before sending the next command.
-        """
-        if isinstance(self._comms.instrument_object, GPIBInstrument):
-            if self._comms.backend == "@py":
-                # FIXME: PyVisa-py doesn't implement wait_for_srq.
-                # Workaround: poll a command unavailable during execution.
-                t_start = 0
-                while t.time() >= t_start + self._comms.timeout/1000:
-                    t_start = t.time()
-                    self.query("*OPT?")
-                self.write(":ERROR:LAST:CLEAR")
-            else:
-                self._comms.instrument_object.wait_for_srq()
+        Tests if a test is currently executing on the instrument.
 
-        else:
-            # For TCPIP, repeated requests until
-            while True:
-                response: str = self.query("SP")
-                if response.isnumeric() and int(response) in [0, 1]:
-                    break
+        Returns:
+            bool: True if a test is running, False if idle.
+        """
+        # PMU
+        if self._test_mode == RPMMode.PMU:
+            response: str = self.query(":PMU:TEST:STATUS?").strip()
+            return response == "1"
+
+        # SMU / GPIB
+        if isinstance(self._comm.instrument_object, GPIBInstrument):
+            start_time = t.time()
+            self.query("*OPT?")
+            return t.time() - start_time > 5
+
+        # SMU / TCPIP
+        response = self.query("SP").strip()
+        return not (response.isnumeric() and int(response) in [0, 1])
+
+    def waitForTestEnd(self) -> None:
+        """
+        Blocks until the instrument has finished its current test.
+        """
+        if (
+            isinstance(self._comm.instrument_object, GPIBInstrument)
+            and self._comm.backend != "@py"
+        ):
+            self._comm.instrument_object.wait_for_srq()
+            return
+
+        while self.isTestRunning():
+            pass
+
+        # Clear the error latch left by the PyVISA-py *OPT? workaround.
+        if isinstance(self._comm.instrument_object, GPIBInstrument):
+            self.write(":ERROR:LAST:CLEAR")
+
 
     def makeDependentFrom(self, data: Measurement, params: list[Measurement]) -> BlobDependent:
         """
-        Build a :class:`BlobDependent` from a data measurement and a list of parameter measurements.
-
-        Each parameter measurement contributes one axis to the result.  Its ``steps`` attribute defines
-        the length of that axis and its :meth:`~Measurement.getResultSerie` values become the coordinate array.  
-        The data measurement is fetched as a flat series and reshaped into the N-D array whose shape is
-        ``(params[0].steps, params[1].steps, …)`` after sorting the Measurements by order.
+        Build a BlobDependent from a data measurement and a list of parameter measurements.
+        Parameters order is defined automatically using the Measurement's order attribute.
 
         Args:
             data (Measurement): The measurement that contains the raw result data.
@@ -274,11 +304,7 @@ class KI4200A:
             the data measurement name.
 
         Raises:
-            ValueError: If ``data.steps`` does not equal the product of all
-                parameter ``steps``.
-
-        Example:
-            >>> dep = ki.makeDependentFrom(id_measurement, [vg_measurement, vd_measurement])
+            ValueError: If data.steps does not equal the product of all parameter steps.
         """
         invalid: list[str] = [
             p.name for p in params if p.order < 0 or p.steps <= 0
@@ -351,25 +377,25 @@ class KI4200A:
     @property
     def comms(self) -> Communications:
         """The underlying Communications object for this instrument."""
-        return self._comms
+        return self._comm
 
     @property
     def write_termination(self) -> str:
         """The termination character(s) appended to every command written to the instrument."""
-        return self._comms.write_termination
+        return self._comm.write_termination
 
     @write_termination.setter
     def write_termination(self, value: str) -> None:
-        self._comms.write_termination = value
+        self._comm.write_termination = value
 
     @property
     def read_termination(self) -> str:
         """The termination character(s) expected at the end of every response from the instrument."""
-        return self._comms.read_termination
+        return self._comm.read_termination
 
     @read_termination.setter
     def read_termination(self, value: str) -> None:
-        self._comms.read_termination = value
+        self._comm.read_termination = value
 
     @property
     def exit_on_compliance(self) -> bool:
@@ -381,7 +407,7 @@ class KI4200A:
         self._exit_on_compliance = value
         self.write("US")
         self.write(f"EC {int(value)}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def integration_time(self) -> IntegrationTime:
@@ -393,7 +419,7 @@ class KI4200A:
         self._integration_time = value
         self.write("US")
         self.write(f"IT {value.value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def test_mode(self) -> RPMMode:
@@ -406,43 +432,24 @@ class KI4200A:
         rpms: list[PMU_RPM] = [rpm for rpm in self.l_equipment if isinstance(rpm, PMU_RPM)]
         for rpm in rpms:
             self.write(f":PMU:RPM:CONFIGURE PMU{rpm.name[-3]}-{rpm.name[-1]}, {value.value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def pmu_measure_mode(self) -> PMUMeasureMode:
-        """Measurement mode for all PMU channels, sent via ``:PMU:MEASURE:MODE``.
-
-        Selects what data the PMU captures and returns:
-
-        * ``NONE`` (0) — no measurements.
-        * ``SPOT_MEAN_DISCRETE`` (1) — averaged V/I per pulse (default).
-        * ``WAVEFORM_DISCRETE`` (2) — full time-sampled waveform per pulse.
-        * ``SPOT_MEAN_AVERAGE`` (3) — spot mean averaged across all burst pulses.
-        * ``WAVEFORM_AVERAGE`` (4) — waveform averaged across all burst pulses.
-
-        Setting this property immediately sends the command to the instrument.
-        """
+        """Measurement mode for all PMU channels."""
         return self._pmu_measure_mode
 
     @pmu_measure_mode.setter
     def pmu_measure_mode(self, value: PMUMeasureMode) -> None:
         self._pmu_measure_mode = value
         self.write(f":PMU:MEASURE:MODE {value.value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def pulse_burst_count(self) -> int:
-        """Total number of pulses output per test across all active PMU channels.
-
-        Used in average and discrete measurement modes:
-
-        * ``SPOT_MEAN_DISCRETE`` — generates *burstCount* data points per channel.
-        * ``WAVEFORM_DISCRETE`` — generates *burstCount × waveform_points* data points.
-        * ``SPOT_MEAN_AVERAGE`` — always generates 1 averaged data point.
-        * ``WAVEFORM_AVERAGE`` — generates *waveform_points* averaged data points.
-
-        Valid range: 1 to 10 000. Default after ``:PMU:INIT``: 1.
-        Sends ``:PMU:PULSE:BURST:COUNT <n>`` to the instrument.
+        """
+        Total number of pulses output per test across all active PMU channels.
+        Valid range: 1 to 10 000.
         """
         return self._pmu_burst_count
 
@@ -452,20 +459,18 @@ class KI4200A:
             raise ValueError(f"Burst count must be between 1 and 10 000; got {value}.")
         self._pmu_burst_count = value
         self.write(f":PMU:PULSE:BURST:COUNT {value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
 
     @property
     def pmu_sample_rate(self) -> int:
-        """PMU waveform capture sample rate in samples per second.
+        """
+        PMU waveform capture sample rate in samples per second.
 
-        Valid range: 1 000 to 200 000 000 Sa/s (1 kSa/s to 200 MSa/s).
-        The value is sent as an integer.
-        Default after ``:PMU:INIT``: 200 MSa/s.
+        Valid range: 1 000 to 200 000 000 Sa/s
 
         The instrument may silently adjust the rate if it would produce more than
-        65\ 536 data points, or if it is slower than required by the shortest
+        65 536 data points, or if it is slower than required by the shortest
         measurement interval.
-        Sends ``:PMU:SAMPLE:RATE <rate>`` to the instrument.
         """
         return self._pmu_sample_rate
 
@@ -477,4 +482,4 @@ class KI4200A:
             )
         self._pmu_sample_rate = value
         self.write(f":PMU:SAMPLE:RATE {value}")
-        self._comms.checkForError()
+        self._comm.checkForError()
