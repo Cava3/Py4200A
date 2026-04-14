@@ -33,13 +33,13 @@ class KI4200A:
         """
         # Attributes declaration
         #Public
-        self.id: dict[str, str]
-        self.status: Status             # KI4200A's current task or state
-        self.l_equipment: list[Board]   # List of board objects equipped in the instrument
-        self.l_smus: list[SMU]          # List of SMU boards equipped in the instrument by slot order
-        self.l_rpms: list[PMU_RPM]      # List of RPM boards equipped in the instrument by slot order
-        self.display: Display           # Display controller for managing the instrument's display
-        self.all_measurements: list[Measurement] # List of all measurements configured on the instrument
+        self.id: dict[str, str]                     # ID of the instrument
+        self.status: Status                         # KI4200A's current task or state
+        self.l_equipment: list[Board]               # List of board objects equipped in the instrument
+        self.l_smus: list[SMU]                      # List of SMU boards equipped in the instrument by slot order
+        self.l_rpms: list[PMU_RPM]                  # List of RPM boards equipped in the instrument by slot order
+        self.display: Display                       # Display controller for managing the instrument's display
+        self.all_measurements: list[Measurement]    # List of all measurements configured on the instrument
         
         #Private
         self._comm: Communications
@@ -181,6 +181,9 @@ class KI4200A:
         Send a command to the instrument but doesn't read an answer.  
         Only for GPIB, as TCPIP always return a value, or "ACK".  
         For TCPIP, redirects to `query`
+
+        Args:
+            command (str): The command to send to the instrument.
         """
         if self._comm.con_type == 1:
             self._comm.write(command)
@@ -194,6 +197,7 @@ class KI4200A:
 
         Args:
             command (str): The command to send to the instrument.
+
         Returns:
             str: The response from the instrument.
         """
@@ -202,7 +206,7 @@ class KI4200A:
 
     def disconnect(self) -> None:
         """
-        Disconnect from the instrument and release any resources.
+        Disconnect from the instrument.
         """
         self._comm.disconnect()
         self.status = Status.DISCONNECTED
@@ -215,10 +219,7 @@ class KI4200A:
 
     def runTest(self, clear_buffer: bool = True) -> None:
         """
-        Starts the test sequence on the instrument.
-
-        In SMU mode, triggers the SMU test via ME.
-        In PMU mode, executes the PMU pulse test via :PMU:EXECUTE.
+        Starts the test sequence on the instrument. Test type depends on the set test mode.
 
         Args:
             clear_buffer (bool): Whether to clear the result buffer before running. Defaults to True.
@@ -243,35 +244,17 @@ class KI4200A:
     def initPMU(self) -> None:
         """
         Initialize the PMU in standard pulse mode.
-
-        Sends ``:PMU:INIT 0``, which resets both channels of the pulse card to
-        their default settings for standard pulse mode, clears the data buffer,
-        and deletes all Segment Arb sequences.
-
-        This must be called before any other PMU configuration command.  To
-        reset *all* cards in the system at once, use :meth:`reset` instead
-        (which sends ``*RST``).
+        Must be called before any other PMU configuration.
         """
         self.write(":PMU:INIT 0")
         self._comm.checkForError()
 
     def isTestRunning(self) -> bool:
-        """Return ``True`` if a test is currently executing on the instrument.
-
-        This method always uses polling and never blocks.  It is safe to call
-        from any thread and for any connection type or PyVISA backend.
-
-        * **PMU mode**: queries ``:PMU:TEST:STATUS?``; the instrument returns
-          ``1`` while a pulse test is running and ``0`` when idle.
-        * **SMU mode / GPIB**: sends ``*OPT?``; the instrument does not respond
-          while a test is in progress, so a successful reply within the timeout
-          window means the test has finished (``False``).  A timeout exception
-          is caught and treated as still running (``True``).
-        * **SMU mode / TCPIP**: sends ``SP``; returns ``True`` unless the
-          response is the numeric status code ``0`` or ``1`` (idle).
+        """
+        Tests if a test is currently executing on the instrument.
 
         Returns:
-            bool: ``True`` if a test is running, ``False`` if idle.
+            bool: True if a test is running, False if idle.
         """
         # PMU
         if self._test_mode == RPMMode.PMU:
@@ -291,12 +274,6 @@ class KI4200A:
     def waitForTestEnd(self) -> None:
         """
         Blocks until the instrument has finished its current test.
-
-        * **GPIB with native (non-@py) backend**: uses the hardware SRQ line
-          via ``wait_for_srq()`` — the most efficient and reliable method.
-        * **All other cases** (PyVISA-py GPIB, TCPIP): polls
-          :meth:`isTestRunning` in a tight loop until it returns ``False``.
-          After the SMU GPIB @py poll exits, the error buffer is cleared.
         """
         if (
             isinstance(self._comm.instrument_object, GPIBInstrument)
@@ -315,12 +292,8 @@ class KI4200A:
 
     def makeDependentFrom(self, data: Measurement, params: list[Measurement]) -> BlobDependent:
         """
-        Build a :class:`BlobDependent` from a data measurement and a list of parameter measurements.
-
-        Each parameter measurement contributes one axis to the result.  Its ``steps`` attribute defines
-        the length of that axis and its :meth:`~Measurement.getResultSerie` values become the coordinate array.  
-        The data measurement is fetched as a flat series and reshaped into the N-D array whose shape is
-        ``(params[0].steps, params[1].steps, …)`` after sorting the Measurements by order.
+        Build a BlobDependent from a data measurement and a list of parameter measurements.
+        Parameters order is defined automatically using the Measurement's order attribute.
 
         Args:
             data (Measurement): The measurement that contains the raw result data.
@@ -331,11 +304,7 @@ class KI4200A:
             the data measurement name.
 
         Raises:
-            ValueError: If ``data.steps`` does not equal the product of all
-                parameter ``steps``.
-
-        Example:
-            >>> dep = ki.makeDependentFrom(id_measurement, [vg_measurement, vd_measurement])
+            ValueError: If data.steps does not equal the product of all parameter steps.
         """
         invalid: list[str] = [
             p.name for p in params if p.order < 0 or p.steps <= 0
@@ -467,18 +436,7 @@ class KI4200A:
 
     @property
     def pmu_measure_mode(self) -> PMUMeasureMode:
-        """Measurement mode for all PMU channels, sent via ``:PMU:MEASURE:MODE``.
-
-        Selects what data the PMU captures and returns:
-
-        * ``NONE`` (0) — no measurements.
-        * ``SPOT_MEAN_DISCRETE`` (1) — averaged V/I per pulse (default).
-        * ``WAVEFORM_DISCRETE`` (2) — full time-sampled waveform per pulse.
-        * ``SPOT_MEAN_AVERAGE`` (3) — spot mean averaged across all burst pulses.
-        * ``WAVEFORM_AVERAGE`` (4) — waveform averaged across all burst pulses.
-
-        Setting this property immediately sends the command to the instrument.
-        """
+        """Measurement mode for all PMU channels."""
         return self._pmu_measure_mode
 
     @pmu_measure_mode.setter
@@ -489,17 +447,9 @@ class KI4200A:
 
     @property
     def pulse_burst_count(self) -> int:
-        """Total number of pulses output per test across all active PMU channels.
-
-        Used in average and discrete measurement modes:
-
-        * ``SPOT_MEAN_DISCRETE`` — generates *burstCount* data points per channel.
-        * ``WAVEFORM_DISCRETE`` — generates *burstCount × waveform_points* data points.
-        * ``SPOT_MEAN_AVERAGE`` — always generates 1 averaged data point.
-        * ``WAVEFORM_AVERAGE`` — generates *waveform_points* averaged data points.
-
-        Valid range: 1 to 10 000. Default after ``:PMU:INIT``: 1.
-        Sends ``:PMU:PULSE:BURST:COUNT <n>`` to the instrument.
+        """
+        Total number of pulses output per test across all active PMU channels.
+        Valid range: 1 to 10 000.
         """
         return self._pmu_burst_count
 
@@ -513,16 +463,14 @@ class KI4200A:
 
     @property
     def pmu_sample_rate(self) -> int:
-        """PMU waveform capture sample rate in samples per second.
+        """
+        PMU waveform capture sample rate in samples per second.
 
-        Valid range: 1 000 to 200 000 000 Sa/s (1 kSa/s to 200 MSa/s).
-        The value is sent as an integer.
-        Default after ``:PMU:INIT``: 200 MSa/s.
+        Valid range: 1 000 to 200 000 000 Sa/s
 
         The instrument may silently adjust the rate if it would produce more than
         65 536 data points, or if it is slower than required by the shortest
         measurement interval.
-        Sends ``:PMU:SAMPLE:RATE <rate>`` to the instrument.
         """
         return self._pmu_sample_rate
 

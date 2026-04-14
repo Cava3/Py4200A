@@ -18,15 +18,15 @@ ki4200.test_mode = py4200A.consts.RPMMode.PMU
 ki4200.pmu_measure_mode = py4200A.consts.PMUMeasureMode.SPOT_MEAN_DISCRETE
 
 #> Getting the RPMs
-source: py4200A.boards.PMU_RPM = ki4200.getRPM(12)
-gate: py4200A.boards.PMU_RPM = ki4200.getRPM(11)
+source = ki4200.getRPM(12)
+gate   = ki4200.getRPM(11)
 
 #> Configure pulse times
 # Constraints: period 60ns-1s, width > 0.5*(riset+fallt), etc.
-period = 1e-3
-width = 500e-6
-riset = 100e-9
-fallt = 100e-9
+period: float = 1e-3
+width: float  = 500e-6
+riset: float  = 100e-9
+fallt: float  = 100e-9
 
 source.setPulseTimes(period, width, riset, fallt)
 gate.setPulseTimes(period, width, riset, fallt)
@@ -44,7 +44,7 @@ source.output_state = True
 
 #> Run and wait for test
 print("Starting test.")
-t_start = time.time()
+t_start: float = time.time()
 ki4200.runTest()
 ki4200.waitForTestEnd()
 print(f"Done. ({time.time() - t_start:.1f}s)")

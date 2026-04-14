@@ -19,8 +19,7 @@ class Measurement:
         Args:
             comm (Communications): The communication object used to query results.
             name (str): The name of the measurement.
-            measurement_type (MeasurementType): Whether this measurement belongs to an SMU
-                or a PMU_RPM channel. Defaults to `MeasurementType.SMU` for backward compatibility.
+            measurement_type (MeasurementType): Type of measurement between SMU or PMU_RPM.
             steps (int): The number of measurement steps.
             min_value (float): The minimum value.
             max_value (float): The maximum value.
@@ -92,23 +91,14 @@ class Measurement:
 
     def getResultSerie(self, precedent_dimensions: list["Measurement"] | None = None) -> list[float]:
         """
-        Fetch one value per step of this measurement, skipping over repeated inner-loop values.
-
-        In the KXCI buffer, an outer (step) source repeats each of its values once for every
-        point of its inner dimensions. ``precedent_dimensions`` describes those inner measurements
-        so the correct stride can be computed.
-
-        Examples:
-            - Sweep (innermost, no inner dims): ``getResultSerie()`` → first ``steps`` values.
-            - Step with one inner sweep of 20 pts: ``getResultSerie([20])`` → values at buffer indices 1, 152, 303, …
+        Fetch one value per step of this measurement, skipping inner-loop values.
 
         Args:
-            precedent_dimensions: Measurements whose loops are nested *inside* this one.
-                                  Their ``steps`` are multiplied together to form the stride.
-                                  Defaults to ``None`` (stride = 1).
+            precedent_dimensions: Measurements whose loops are nested inside this one.
+                                  Their `steps` are multiplied together to form the stride.
 
         Returns:
-            list[float]: ``steps`` values, one per unique output level of this measurement.
+            list[float]: `steps` values, one per unique output level of this measurement.
         """
         stride: int = 1
         if precedent_dimensions:
@@ -156,16 +146,18 @@ class Measurement:
                         l_readings.append(float(val))
             return l_readings
 
-        l_readings: list[float] = []
-        index: int = 1
-        value: str = self.getResultAt(index)
-        index+=1
-        while self.isResultValid(value):
-            l_readings.append(float(value))
-            value = self.getResultAt(index)
-            index += 1
+        elif self.measurement_type == MeasurementType.SMU:
+            l_readings: list[float] = []
+            index: int = 1
+            value: str = self.getResultAt(index)
+            index+=1
+            while self.isResultValid(value):
+                l_readings.append(float(value))
+                value = self.getResultAt(index)
+                index += 1
+            return l_readings
 
-        return l_readings
+        return []
 
     def getGraphCommand(self, axis: GraphPosition) -> str:
         """
@@ -187,19 +179,25 @@ class Measurement:
     # === Getters and setters ===
     @property
     def name(self) -> str:
-        """Alphanumeric measurement label used in KXCI commands (always uppercased)."""
+        """
+        Alphanumeric measurement label used in KXCI commands (always uppercased).
+        
+        Constraints:
+            Must be alphanumeric
+            Must start with a letter
+            Must not exceed 6 characters
+        """
         return self._name
     
     @name.setter
     def name(self, value: str) -> None:
         if not value.isalnum() or not value[0].isalpha():
             raise KXCILimitationError("Measurement name must be alphanumeric and start with a letter")
+        if len(value) > 6:
+            raise KXCILimitationError("Measurement name must be less than 6 characters")
 
         self._name = value.upper()
-        # Derive the PMU channel number from the last character of the raw name.
-        # For PMU channel names such as "pmu1-rpm1-2", the channel is the last
-        # digit.  For plain alphanumeric names (SMU measurements) we fall back
-        # to 0 so that the attribute is always present.
+        # For PMU, the channel is the last digit of the name. No reason to rename it anyway.
         self._channel: int = int(value[-1]) if value[-1].isdigit() else 0
 
     @property

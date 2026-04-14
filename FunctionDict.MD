@@ -56,7 +56,7 @@
 
 - [x] `:PMU:ABORT` - Abort the current PMU test
 - [ ] `:PMU:CONNECTION:COMP` - Set PMU connection compensation
-- [x] `:PMU:DATA:COUNT?` - Query the number of data points available
+- [ ] `:PMU:DATA:COUNT?` - Query the number of data points available
 - [x] `:PMU:DATA:GET` - Get measurement data from the PMU
 - [x] `:PMU:EXECUTE` - Execute a configured PMU test
 - [x] `:PMU:INIT` - Initialize the PMU
