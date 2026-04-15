@@ -65,7 +65,6 @@ class Measurement:
             return "0.0"
 
         str_result: str = self._com.query(f"RD '{self.name}', {index}")
-        self._com.checkForError()
 
         return str_result
 
@@ -155,6 +154,7 @@ class Measurement:
                         if self.isResultValid(val):
                             l_readings.append(float(val))
                 start += BLOCK
+            self._com.checkForError()
             return l_readings
 
         elif self.measurement_type == MeasurementType.SMU:
@@ -166,6 +166,7 @@ class Measurement:
                 l_readings.append(float(value))
                 value = self.getResultAt(index)
                 index += 1
+            self._com.checkForError()
             return l_readings
 
         return []
