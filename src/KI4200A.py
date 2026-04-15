@@ -73,6 +73,7 @@ class KI4200A:
             "Serial Number": "",
             "Software Version": ""    
         }
+        self.reset()
         self.scan()
         self.all_measurements = [measurement for board in self.l_equipment for measurement in board.measurements]
 

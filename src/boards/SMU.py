@@ -39,12 +39,12 @@ class SMU(Board):
         # Channel definition
         self.status = Status.CONFIGURING
         self._smu_type: SMUMode = SMUMode.VM if "VM" in name.upper() else SMUMode.VS if "VS" in name.upper() else SMUMode.SMU
-        self.voltage_measurement: Measurement = Measurement(comm, self.name+"V", unit=SourceType.VOLT)
-        self.current_measurement: Measurement = Measurement(comm, self.name+"I", unit=SourceType.AMPERE)
+        self.voltage_measurement: Measurement = Measurement(comm, self.name[-4:]+"V", unit=SourceType.VOLT)
+        self.current_measurement: Measurement = Measurement(comm, self.name[-4:]+"I", unit=SourceType.AMPERE)
+        self.measurements: list[Measurement] = [self.voltage_measurement, self.current_measurement]
         self.source_type: SourceType = SourceType.NONE
         self.source_function: SourceFunction = SourceFunction.NONE
         self._poweroff_after_test: bool = True
-        self.measurements: list[Measurement] = [self.voltage_measurement, self.current_measurement]
         self._stepper_index: int = 0
 
         #Source setup
@@ -65,7 +65,6 @@ class SMU(Board):
 
     # === Factory ===
 
-
     @classmethod
     def of(cls, board: Board) -> "SMU":
         """
@@ -81,7 +80,9 @@ class SMU(Board):
         smu.status = board.status
         return smu
 
+
     # === Public ===
+
     # Channel definition
     def deactivate(self) -> None:
         """

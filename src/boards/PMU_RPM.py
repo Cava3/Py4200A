@@ -61,10 +61,10 @@ class PMU_RPM(Board):
 
         # Last pulse timing parameters (saved for inspection / display purposes)
         self.period: float = 1e-6
-        self.width: float = 500e-9
-        self.riset: float = 100e-9
-        self.fallt: float = 100e-9
-        self.delay: float = 0.0
+        self.width:  float = 5e-7
+        self.riset:  float = 1e-7
+        self.fallt:  float = 1e-7
+        self.delay:  float = 0.0
 
         # Last pulse train voltage levels
         self.vbase: float = 0.0

@@ -11,6 +11,7 @@ INST_RESOURCE_STR = "GPIB0::17::INSTR"
 
 ki4200: KI4200A = KI4200A(INST_RESOURCE_STR)
 ki4200.reset()
+ki4200.test_mode = py4200A.consts.RPMMode.SMU
 
 #> Getting the SMUs
 source = ki4200.getSMU(3)

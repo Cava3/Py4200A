@@ -2,7 +2,7 @@
 Measurement.py - Python module defining the Measurement class to represent a specific measurement in the Keithley 4200A.
 Author: Lucas LE DUDAL
 """
-from ..consts import GraphPosition, MeasurementType, PMURequestedValue, SourceType
+from ..consts import GraphPosition, MeasurementType, SourceType
 from ..error import KXCILimitationError
 from ..instrcomms import Communications
 
@@ -180,10 +180,11 @@ class Measurement:
     @property
     def name(self) -> str:
         """
-        Alphanumeric measurement label used in KXCI commands (always uppercased).
+        Measurement label used in KXCI commands (always uppercased).
         
         Constraints:
             Must be alphanumeric
+            Must be uppercase (will be converted if not)
             Must start with a letter
             Must not exceed 6 characters
         """

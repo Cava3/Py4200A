@@ -35,12 +35,11 @@ gate.setPulseTimes(period, width, riset, fallt)
 # Gate steps from 0 to 5V
 gate.setPulseStep(py4200A.consts.PMUPulseMode.AMPLITUDE, start=0, stop=5, step=1, constant_v=0)
 gate.setMeasurePIV(acquire_high=True, acquire_low=False)
-gate.output_state = True
 
 # Source sweeps from 0 to 10V (within default 10V span)
-source.setPulseSweep(py4200A.consts.PMUPulseMode.AMPLITUDE, start=0, stop=10, step=0.1, dual_sweep=False, constant_v=0)
+source.setPulseSweep(py4200A.consts.PMUPulseMode.AMPLITUDE, start=0, stop=15, step=0.1, dual_sweep=False, constant_v=0)
 source.setMeasurePIV(acquire_high=True, acquire_low=False)
-source.output_state = True
+source.source_range = py4200A.consts.PMUSourceRange.V40
 
 #> Run and wait for test
 print("Starting test.")
@@ -48,10 +47,6 @@ t_start: float = time.time()
 ki4200.runTest()
 ki4200.waitForTestEnd()
 print(f"Done. ({time.time() - t_start:.1f}s)")
-
-# Make sure outputs are safely off after test
-source.output_state = False
-gate.output_state = False
 
 #> Collect results as a BlobDependent
 result: py4200A.results.BlobDependent = ki4200.makeDependentFrom(
