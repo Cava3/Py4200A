@@ -36,8 +36,8 @@ class KI4200A:
         self.id: dict[str, str]                     # ID of the instrument
         self.status: Status                         # KI4200A's current task or state
         self.l_equipment: list[Board]               # List of board objects equipped in the instrument
-        self.l_smus: list[SMU]                      # List of SMU boards equipped in the instrument by slot order
-        self.l_rpms: list[PMU_RPM]                  # List of RPM boards equipped in the instrument by slot order
+        self.l_smus: list[SMU] = []                 # List of SMU boards equipped in the instrument by slot order
+        self.l_rpms: list[PMU_RPM] = []             # List of RPM boards equipped in the instrument by slot order
         self.display: Display                       # Display controller for managing the instrument's display
         self.all_measurements: list[Measurement]    # List of all measurements configured on the instrument
         
