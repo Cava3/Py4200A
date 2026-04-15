@@ -46,7 +46,6 @@ print("Starting test.")
 t_start: float = time.time()
 ki4200.runTest()
 ki4200.waitForTestEnd()
-print(f"Done. ({time.time() - t_start:.1f}s)")
 
 #> Collect results as a BlobDependent
 result: py4200A.results.BlobDependent = ki4200.makeDependentFrom(
@@ -55,6 +54,7 @@ result: py4200A.results.BlobDependent = ki4200.makeDependentFrom(
 )
 
 ki4200.disconnect()
+print(f"Done. ({time.time() - t_start:.1f}s)")
 
 #> Plot ISRC vs VSRC, one curve per VGT value
 colors: list[str] = ["red", "green", "blue", "magenta", "yellow", "cyan"]

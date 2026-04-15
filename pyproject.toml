@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "py4200A"
-version = "0.2.1"
+version = "0.2.2"
 description = "Python interface for Keithley 4200A-SCS Semiconductor Characterization System through KXCI"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
     "pyvisa>=1.11.0",
     "numpy>=1.20.0",
+    "gpib-ctypes>=0.3.0",
 ]
 
 [project.optional-dependencies]
