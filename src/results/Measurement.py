@@ -131,19 +131,30 @@ class Measurement:
             list[float]: The list of measurement values retrieved from the instrument.
         """
         if self.measurement_type == MeasurementType.PMU_RPM:
-            raw_data = self._com.query(f":PMU:DATA:GET {self._channel}")
+            total = int(self._com.query(f":PMU:DATA:COUNT? {self._channel}"))
             self._com.checkForError()
-            if not raw_data:
+            if total == 0:
                 return []
-            
+
+            BLOCK = 2048
             l_readings: list[float] = []
-            for point in raw_data.strip().split(";"):
-                if not point: continue
-                values = point.split(",")
-                if len(values) > self.pmu_offset:
-                    val = values[self.pmu_offset]
-                    if self.isResultValid(val):
-                        l_readings.append(float(val))
+            start = 0
+            while start < total:
+                raw_data = self._com.query(
+                    f":PMU:DATA:GET {self._channel}, {start}, {min(BLOCK, total - start)}"
+                )
+                self._com.checkForError()
+                if not raw_data:
+                    break
+                for point in raw_data.strip().split(";"):
+                    if not point:
+                        continue
+                    values = point.split(",")
+                    if len(values) > self.pmu_offset:
+                        val = values[self.pmu_offset]
+                        if self.isResultValid(val):
+                            l_readings.append(float(val))
+                start += BLOCK
             return l_readings
 
         elif self.measurement_type == MeasurementType.SMU:
