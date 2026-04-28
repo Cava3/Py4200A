@@ -10,7 +10,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Lucas LE DUDAL" }]
 requires-python = ">=3.10"
-keywords = ["keithley", "4200A", "SCS", "GPIB", "KXCI", "semiconductor", "instrument", "measurement"]
+keywords = ["keithley", "4200A", "SCS", "GPIB", "KXCI", "semiconductor", "instrument", "measurement", "KI4200", "KI4200A", "pyvisa", "python-instrument-control"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
