@@ -49,8 +49,9 @@ class Communications:
                 t_resource.close()
             except Exception as e:
                 raise RuntimeError(
-                    "No VISA backend found. Install NI-VISA (Windows/Mac) "
-                    "or pyvisa-py: pip install py4200A[visa-py]"
+                    "No suitable VISA backend.\n"
+                    "Make sure you installed NI-VISA (Windows/Mac) / pyvisa-py and proper drivers.\n"
+                    "Make sure you have a valid resource string (device must be connected and running)."
                 ) from e
 
     def connect(self, instrument_resource_string: str | None = None, timeout: int | None = None) -> None:

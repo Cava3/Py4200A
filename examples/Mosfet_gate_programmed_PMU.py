@@ -11,10 +11,10 @@ INST_RESOURCE_STR = "GPIB0::17::INSTR"
 
 ki4200: KI4200A = KI4200A(INST_RESOURCE_STR)
 ki4200.reset()
+ki4200.test_mode = py4200A.consts.RPMMode.PMU
 
 #> Init PMU and test mode
 ki4200.initPMU()
-ki4200.test_mode = py4200A.consts.RPMMode.PMU
 ki4200.pmu_measure_mode = py4200A.consts.PMUMeasureMode.SPOT_MEAN_DISCRETE
 
 #> Getting the RPMs

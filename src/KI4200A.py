@@ -209,7 +209,9 @@ class KI4200A:
         """
         Disconnect from the instrument.
         """
-        self._comm.disconnect()
+        if hasattr(self, "_comm"):
+            self._comm.disconnect()
+
         self.status = Status.DISCONNECTED
 
     def reconnect(self) -> None:
