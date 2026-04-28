@@ -121,6 +121,7 @@ class KI4200A:
 
         for smu in self.l_smus:
             smu.deactivate()
+        SMU.stepper_index = 0
 
         # Reset RPMs
         self.test_mode = RPMMode.PMU

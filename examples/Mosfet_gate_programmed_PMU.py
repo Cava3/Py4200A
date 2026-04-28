@@ -19,7 +19,9 @@ ki4200.pmu_measure_mode = py4200A.consts.PMUMeasureMode.SPOT_MEAN_DISCRETE
 
 #> Getting the RPMs
 source = ki4200.getRPM(12)
+source.activated = True
 gate   = ki4200.getRPM(11)
+gate.activated = True
 
 #> Configure pulse times
 # Constraints: period 60ns-1s, width > 0.5*(riset+fallt), etc.
