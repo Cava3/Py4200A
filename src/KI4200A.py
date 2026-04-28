@@ -278,13 +278,6 @@ class KI4200A:
         """
         Blocks until the instrument has finished its current test.
         """
-        if (
-            isinstance(self._comm.instrument_object, GPIBInstrument)
-            and self._comm.backend != "@py"
-        ):
-            self._comm.instrument_object.wait_for_srq()
-            return
-
         while self.isTestRunning():
             pass
 
