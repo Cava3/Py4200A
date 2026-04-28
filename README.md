@@ -24,10 +24,14 @@ pip install py4200A[visa-py]
 ```
 
 > [!IMPORTANT]
-> **Linux users**
+> **Linux users**  
 > You will need a GPIB backend if you want to use GPIB. I would recommend doing a proper [linux-gpib](https://github.com/coolshou/linux-gpib)
 > installation beforehand. Make sure your installation of 'linux-gpib' works before opening an issue.
 > You can use the `ibtest` tool installed with 'linux-gpib' to test GPIB connection (run as sudo)
+
+If you run on Linux, only the root user (and through the sudo command) will be able to access your GPIB ports.  
+Run the `AddUserPermissions.sh` script to create (and join) a group that has permission to use the GPIB devices without using sudo.
+This will allow you to run your scripts and also the `ibtest` tool without sudo.  
 
 ## How to use
 ### KI 4200A Configuration
@@ -202,10 +206,7 @@ plt.show()
 - [x] Analysis and plotting
 - [x] Publish on PyPi
 - [x] PMU RMP commands
-- [ ] Matlab wrapper
-- [ ] Util to export results to CSV, txt, BLOB
-- [ ] Util to save/export and load/import settings profiles
-- [ ] Export to XLSX
+- [x] Matlab wrapper
 - [ ] Full instruction dictionnary capabilities
 
 ## Contribute
@@ -219,6 +220,7 @@ Garbage AI-generated spaghetti code (also know as "*vibe coding*") will be rejec
 good and proper usage of AI tools though. Simply keep your code relevant and readable.
 
 ## See also
+[MATLAB wrapper]() - A Matlab project to wrap this library and use it "natively".
 [instrcom.py](./src/instrcomms.py) - Sample file from Tektronix under [a very permissive license](https://www.tek.com/sample-license)  
 [linux-gpib](https://github.com/coolshou/linux-gpib) - GPIB driver I'm using on my Linux (Ubuntu) laptop.  
 [PyVISA](https://pyvisa.readthedocs.io/en/latest/) - Python library to communicate with a device via most interfaces through VISA  
