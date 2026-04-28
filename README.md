@@ -220,9 +220,9 @@ Garbage AI-generated spaghetti code (also know as "*vibe coding*") will be rejec
 good and proper usage of AI tools though. Simply keep your code relevant and readable.
 
 ## See also
-[MATLAB wrapper]() - A Matlab project to wrap this library and use it "natively".
-[instrcom.py](./src/instrcomms.py) - Sample file from Tektronix under [a very permissive license](https://www.tek.com/sample-license)  
+[MATLAB wrapper](https://github.com/Cava3/mat4200A) - A Matlab project to wrap this library and use it "natively".  
+[instrcom.py](./src/instrcomms.py) - Sample file from Tektronix under [a very permissive license](https://www.tek.com/sample-license).  
 [linux-gpib](https://github.com/coolshou/linux-gpib) - GPIB driver I'm using on my Linux (Ubuntu) laptop.  
-[PyVISA](https://pyvisa.readthedocs.io/en/latest/) - Python library to communicate with a device via most interfaces through VISA  
-[PyVISA-py](https://pypi.org/project/PyVISA-py/) -  Replaces proprietary VISA libraries with a python implementation  
-[USAL](https://usal.es/) - The university that works on this project  
+[PyVISA](https://pyvisa.readthedocs.io/en/latest/) - Python library to communicate with a device via most interfaces through VISA.  
+[PyVISA-py](https://pypi.org/project/PyVISA-py/) - Replaces proprietary VISA libraries with a python implementation.  
+[USAL](https://usal.es/) - The university that works on this project.  
