@@ -44,12 +44,14 @@ class PMU_RPM(Board):
         # Measurements definition
         from ..results import Measurement
         from ..consts import MeasurementType, SourceType
-        self.vh_measurement = Measurement(comm, f"VH{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.VOLT, pmu_offset=0)
-        self.ih_measurement = Measurement(comm, f"IH{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.AMPERE, pmu_offset=1)
-        self.vl_measurement = Measurement(comm, f"VL{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.VOLT, pmu_offset=4)
-        self.il_measurement = Measurement(comm, f"IL{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.AMPERE, pmu_offset=5)
+        self.vh_measurement = Measurement(comm, f"VH{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.VOLT, pmu_offset=0, pmu_rv="VH")
+        self.ih_measurement = Measurement(comm, f"IH{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.AMPERE, pmu_offset=1, pmu_rv="IH")
+        self.th_measurement = Measurement(comm, f"TH{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.NONE, pmu_offset=2, pmu_rv="TH")
+        self.vl_measurement = Measurement(comm, f"VL{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.VOLT, pmu_offset=4, pmu_rv="VL")
+        self.il_measurement = Measurement(comm, f"IL{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.AMPERE, pmu_offset=5, pmu_rv="IL")
+        self.tl_measurement = Measurement(comm, f"TL{self._channel}", MeasurementType.PMU_RPM, unit=SourceType.NONE, pmu_offset=6, pmu_rv="TL")
 
-        self.measurements: list[Measurement] = [self.vh_measurement, self.ih_measurement, self.vl_measurement, self.il_measurement]
+        self.measurements: list[Measurement] = [self.vh_measurement, self.ih_measurement, self.th_measurement, self.vl_measurement, self.il_measurement, self.tl_measurement]
         self._stepper_index: int = 0
 
         # Cached backing values for properties (hardware defaults after :PMU:INIT)

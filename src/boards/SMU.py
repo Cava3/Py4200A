@@ -7,7 +7,7 @@ type of board (an SMU) equipped in the KI4200A. The SMU class provides methods a
 to SMUs, such as voltage and current measurement capabilities.
 """
 from .Board import Board
-from ..consts import Status, BoardType, SourceType, SourceFunction, SMUMode, SweepType
+from ..consts import Status, BoardType, SourceType, SourceFunction, SMUMode, SweepType, MeasurementType
 from ..instrcomms import Communications
 from ..results import Measurement
 from ..error import KXCILimitationError
@@ -41,7 +41,8 @@ class SMU(Board):
         self._smu_type: SMUMode = SMUMode.VM if "VM" in name.upper() else SMUMode.VS if "VS" in name.upper() else SMUMode.SMU
         self.voltage_measurement: Measurement = Measurement(comm, self.name[-4:]+"V", unit=SourceType.VOLT)
         self.current_measurement: Measurement = Measurement(comm, self.name[-4:]+"I", unit=SourceType.AMPERE)
-        self.measurements: list[Measurement] = [self.voltage_measurement, self.current_measurement]
+        self.time_measurement: Measurement = Measurement(comm, self.name[-4:]+"T", MeasurementType.SMU_TIME, unit=SourceType.NONE, do_channel_ref=self.voltage_measurement)
+        self.measurements: list[Measurement] = [self.voltage_measurement, self.current_measurement, self.time_measurement]
         self.source_type: SourceType = SourceType.NONE
         self.source_function: SourceFunction = SourceFunction.NONE
         self._poweroff_after_test: bool = True
@@ -295,20 +296,23 @@ class SMU(Board):
         self._comm.checkForError()
 
         # Update measurements
+        num_steps = int((self.func_stop - self.func_start)/self.func_step) + 1
         if self.source_type == SourceType.VOLT:
-            self.voltage_measurement.steps = int((self.func_stop - self.func_start)/self.func_step) + 1
+            self.voltage_measurement.steps = num_steps
             self.voltage_measurement.order = 0
             self.voltage_measurement.min_value = min(self.func_start, self.func_stop)
             self.voltage_measurement.max_value = max(self.func_start, self.func_stop)
             self.current_measurement.min_value = -abs(self.compliance)
             self.current_measurement.max_value = abs(self.compliance)
         elif self.source_type == SourceType.AMPERE:
-            self.current_measurement.steps = int((self.func_stop - self.func_start)/self.func_step) + 1
+            self.current_measurement.steps = num_steps
             self.current_measurement.order = 0
             self.current_measurement.min_value = min(self.func_start, self.func_stop)
             self.current_measurement.max_value = max(self.func_start, self.func_stop)
             self.voltage_measurement.min_value = -abs(self.compliance)
             self.voltage_measurement.max_value = abs(self.compliance)
+        self.time_measurement.steps = num_steps
+        self.time_measurement.order = 0
 
 
     def setStepFunction2(self, start: float = 0.0, step: float = 0.0, num_steps: int = 0, compliance: float = 0.0) -> None:
@@ -364,6 +368,8 @@ class SMU(Board):
             self.current_measurement.max_value = max(self.func_start, self.func_start + self.func_step * self.num_steps)
             self.voltage_measurement.min_value = -abs(self.compliance)
             self.voltage_measurement.max_value = abs(self.compliance)
+        self.time_measurement.steps = self.num_steps
+        self.time_measurement.order = self._stepper_index
 
     def setStepFunction(self, start: float = 0.0, stop: float = 0.0, step: float = 0.0, compliance: float = 0.0) -> None:
         """
@@ -437,6 +443,8 @@ class SMU(Board):
             self.current_measurement.max_value = max(values)
             self.voltage_measurement.min_value = -abs(self.compliance)
             self.voltage_measurement.max_value = abs(self.compliance)
+        self.time_measurement.steps = len(values)
+        self.time_measurement.order = 0
 
 
     # === Private / Utils ===

@@ -12,7 +12,7 @@ class Measurement:
     This class represents a measurement configuration and its associated data.
     """
 
-    def __init__(self, comm: Communications, name: str, measurement_type: MeasurementType = MeasurementType.SMU, steps: int = -1, min_value: float = 0.0, max_value: float = 0.0, is_log_scale: bool = False, unit: SourceType = SourceType.NONE, pmu_offset: int = 0) -> None:
+    def __init__(self, comm: Communications, name: str, measurement_type: MeasurementType = MeasurementType.SMU, steps: int = -1, min_value: float = 0.0, max_value: float = 0.0, is_log_scale: bool = False, unit: SourceType = SourceType.NONE, pmu_offset: int = 0, do_channel_ref: "Measurement | None" = None, pmu_rv: str = "") -> None:
         """
         Initialize a Measurement instance.
 
@@ -25,7 +25,10 @@ class Measurement:
             max_value (float): The maximum value.
             is_log_scale (bool): True for logarithmic scale, False for linear.
             unit (SourceType): The unit of the measurement.
-            pmu_offset (int): The index in the comma-separated returned list for this PMU measure.
+            pmu_offset (int): Fallback column index when pmu_rv is not set.
+            pmu_rv (str): requestedValues token for :PMU:DATA:GET (e.g. "VH", "TL").
+                          When set the query requests this column explicitly so the
+                          result is always at index 0, independent of acquire_high/low.
         """
         self._name: str = ""
         self._channel: int = 0
@@ -37,6 +40,8 @@ class Measurement:
         self.order: int = -1
         self.measurement_type: MeasurementType = measurement_type
         self.pmu_offset: int = pmu_offset
+        self.pmu_rv: str = pmu_rv
+        self._do_channel_ref: "Measurement | None" = do_channel_ref
         self.name = name
         self.min_value = min_value
         self.max_value = max_value
@@ -53,16 +58,21 @@ class Measurement:
             str: The raw measurement result at the specified index.
         """
         if self.measurement_type == MeasurementType.PMU_RPM:
-            raw = self._com.query(f":PMU:DATA:GET {self._channel}, {index - 1}, 1")
+            rv_suffix = f", {self.pmu_rv}" if self.pmu_rv else ""
+            raw = self._com.query(f":PMU:DATA:GET {self._channel}, {index - 1}, 1{rv_suffix}")
             self._com.checkForError()
             if raw:
-                # Strip and split just in case of multiple points/trailing chars
                 point = raw.strip().split(";")[0]
                 if point:
                     values = point.split(",")
-                    if len(values) > self.pmu_offset:
-                        return values[self.pmu_offset]
+                    col = 0 if self.pmu_rv else self.pmu_offset
+                    if len(values) > col:
+                        return values[col]
             return "0.0"
+
+        if self.measurement_type == MeasurementType.SMU_TIME:
+            all_res = self.getAllResults()
+            return str(all_res[index - 1]) if 0 < index <= len(all_res) else "0.0"
 
         str_result: str = self._com.query(f"RD '{self.name}', {index}")
 
@@ -104,7 +114,7 @@ class Measurement:
             for m in precedent_dimensions:
                 stride *= m.steps
 
-        if self.measurement_type == MeasurementType.PMU_RPM:
+        if self.measurement_type in (MeasurementType.PMU_RPM, MeasurementType.SMU_TIME):
             all_res = self.getAllResults()
             results: list[float] = []
             for i in range(self.steps):
@@ -136,11 +146,13 @@ class Measurement:
                 return []
 
             BLOCK = 2048
+            col = 0 if self.pmu_rv else self.pmu_offset
+            rv_suffix = f", {self.pmu_rv}" if self.pmu_rv else ""
             l_readings: list[float] = []
             start = 0
             while start < total:
                 raw_data = self._com.query(
-                    f":PMU:DATA:GET {self._channel}, {start}, {min(BLOCK, total - start)}"
+                    f":PMU:DATA:GET {self._channel}, {start}, {min(BLOCK, total - start)}{rv_suffix}"
                 )
                 self._com.checkForError()
                 if not raw_data:
@@ -149,12 +161,35 @@ class Measurement:
                     if not point:
                         continue
                     values = point.split(",")
-                    if len(values) > self.pmu_offset:
-                        val = values[self.pmu_offset]
+                    if len(values) > col:
+                        val = values[col]
                         if self.isResultValid(val):
                             l_readings.append(float(val))
                 start += BLOCK
             self._com.checkForError()
+            return l_readings
+
+        elif self.measurement_type == MeasurementType.SMU_TIME:
+            channel = self._do_channel_ref.name if self._do_channel_ref else self._name
+            raw = self._com.query(f"DO '{channel}T'")
+            self._com.checkForError()
+            if not raw:
+                return []
+            l_readings = []
+            for token in raw.strip().split(","):
+                token = token.strip()
+                if not token:
+                    continue
+                # Strip status prefix if present (e.g. "N 1.23E-03" → "1.23E-03")
+                if token[0].isalpha():
+                    parts = token.split()
+                    token = parts[1] if len(parts) > 1 else token[1:]
+                try:
+                    val = float(token)
+                    if val != 0.0:
+                        l_readings.append(val)
+                except ValueError:
+                    pass
             return l_readings
 
         elif self.measurement_type == MeasurementType.SMU:

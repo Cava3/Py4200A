@@ -108,9 +108,12 @@ class MeasurementType(Enum):
         SMU: Uses the ``RD`` KXCI command (SMU / classic source-measure units).
         PMU_RPM: Uses the ``:PMU:DATA:COUNT?`` / ``:PMU:DATA:GET`` KXCI commands
             (Power Measurement Unit with Remote Pulse Measure card).
+        SMU_TIME: Uses ``DO 'channelT'`` to retrieve timestamps stored alongside
+            an SMU voltage or current measurement (one bulk read, not indexed).
     """
     SMU = "SMU"
     PMU_RPM = "PMU_RPM"
+    SMU_TIME = "SMU_TIME"
 
 class PMURequestedValue(Enum):
     """Tokens accepted by the *requestedValues* parameter of ``:PMU:DATA:GET``.
