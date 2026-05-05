@@ -47,8 +47,8 @@ ki4200.disconnect()
 
 #> Plot ISRC vs VSRC, one curve per VGT value
 colors: list[str] = ["red", "green", "blue", "magenta", "yellow", "cyan"]
-vgt_values = result.parameters["VGT"]
-vsrc_values = result.parameters["VSRC"]
+vgt_values  = result.parameters[gate.voltage_measurement.name]
+vsrc_values = result.parameters[source.voltage_measurement.name]
 
 fig, ax = plt.subplots()
 for i, vgt in enumerate(vgt_values):
