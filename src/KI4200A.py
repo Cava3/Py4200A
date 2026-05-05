@@ -50,6 +50,9 @@ class KI4200A:
         self._pmu_measure_mode: PMUMeasureMode = PMUMeasureMode.SPOT_MEAN_DISCRETE
         self._pmu_burst_count: int = 1
         self._pmu_sample_rate: int = 200_000_000
+        self._nr: int = 1
+        self._wt: float = 0.0
+        self._interval: float = 0.0
         
 
         # Initialization process
@@ -479,4 +482,55 @@ class KI4200A:
             )
         self._pmu_sample_rate = value
         self.write(f":PMU:SAMPLE:RATE {value}")
+        self._comm.checkForError()
+
+    @property
+    def nr(self) -> int:
+        """
+        Number of readings per measurement point (NRdgs), sent via the SM page.
+
+        Valid range: 1 to 4096. Default: 1.
+        """
+        return self._nr
+
+    @nr.setter
+    def nr(self, value: int) -> None:
+        self._nr = min(max(int(value), 1), 4096)
+        self.write("SM")
+        self.write(f"NR {self._nr}")
+        self._comm.checkForError()
+
+    @property
+    def wt(self) -> float:
+        """
+        Wait time before sampling begins (WT), sent via the SM page.
+
+        Valid range: 0 to 100 s. Default: 0.
+        """
+        return self._wt
+
+    @wt.setter
+    def wt(self, value: float) -> None:
+        self._wt = min(max(float(value), 0.0), 100.0)
+        self.write("SM")
+        self.write(f"WT {self._wt}")
+        self._comm.checkForError()
+
+    @property
+    def interval(self) -> float:
+        """
+        Interval between consecutive readings (IN), sent via the SM page.
+
+        Valid range: 0.01 to 10 s (0 = minimum / back-to-back). Default: 0.
+        """
+        return self._interval
+
+    @interval.setter
+    def interval(self, value: float) -> None:
+        value = float(value)
+        if value != 0.0:
+            value = min(max(value, 0.01), 10.0)
+        self._interval = value
+        self.write("SM")
+        self.write(f"IN {self._interval}")
         self._comm.checkForError()
